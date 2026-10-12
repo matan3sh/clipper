@@ -1,16 +1,20 @@
+import { useFocusEffect } from 'expo-router';
 import { Paperclip } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ExpiringBanner } from '@/components/ExpiringBanner';
 import { FilterPills, type FilterOption } from '@/components/FilterPills';
 import { VoucherCard } from '@/components/VoucherCard';
+import { VoucherQuickActions } from '@/components/VoucherQuickActions';
 import { categoryLabel } from '@/lib/categories';
 import { byExpiry, daysUntil, expiryState, splitMoney } from '@/lib/format';
+import { haptics } from '@/lib/haptics';
+import { syncAllReminders } from '@/lib/notifications';
 import { activeVouchers, useClipprStore, useHydrated } from '@/lib/store';
 import { colors } from '@/lib/theme';
-import { CATEGORIES } from '@/types/voucher';
+import { CATEGORIES, type Voucher } from '@/types/voucher';
 
 const ALL = 'all';
 const EXPIRING = 'expiring';
@@ -21,6 +25,18 @@ export default function HomeScreen() {
   const vouchers = useClipprStore((s) => s.vouchers);
   const currency = useClipprStore((s) => s.settings.defaultCurrency);
   const [filter, setFilter] = useState<string>(ALL);
+  const [quickActionsFor, setQuickActionsFor] = useState<Voucher | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Bumped on focus and on pull-to-refresh so "days left" and expired state recompute from the
+  // current clock — matters when the app is left open across midnight.
+  const [clock, setClock] = useState(() => Date.now());
+  useFocusEffect(useCallback(() => setClock(Date.now()), []));
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setClock(Date.now());
+    syncAllReminders().finally(() => setRefreshing(false));
+  }, []);
 
   const active = useMemo(() => activeVouchers(vouchers).sort(byExpiry), [vouchers]);
   const used = useMemo(() => vouchers.filter((v) => v.status === 'used').sort(byExpiry), [vouchers]);
@@ -35,7 +51,9 @@ export default function HomeScreen() {
       return days !== null && days >= 0 && days <= 7;
     });
     return { total, otherCurrencies, expiringSoon, thisWeek };
-  }, [active, currency]);
+    // `clock` is intentionally in the deps: it forces the clock-based filters to recompute.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, currency, clock]);
 
   const options = useMemo<FilterOption[]>(() => {
     const present = CATEGORIES.filter((c) => active.some((v) => v.category === c.id));
@@ -68,7 +86,11 @@ export default function HomeScreen() {
   const soonCount = summary.expiringSoon.length;
 
   return (
-    <ScrollView className="flex-1 bg-paper" contentContainerClassName="gap-[22px] px-gutter pb-36 pt-safe-top">
+    <ScrollView
+      className="flex-1 bg-paper"
+      contentContainerClassName="gap-[22px] px-gutter pb-36 pt-safe-top"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.action} />}
+    >
       <View className="flex-row items-center gap-2">
         <Paperclip size={24} color={colors.ink} strokeWidth={2.2} />
         <Text className="font-display text-title text-ink">Clippr</Text>
@@ -99,11 +121,21 @@ export default function HomeScreen() {
           <FilterPills options={options} selected={selected} onSelect={setFilter} />
           <View>
             {visible.map((voucher, index) => (
-              <VoucherCard key={voucher.id} voucher={voucher} index={index} />
+              <VoucherCard
+                key={voucher.id}
+                voucher={voucher}
+                index={index}
+                onLongPress={() => {
+                  haptics.tap();
+                  setQuickActionsFor(voucher);
+                }}
+              />
             ))}
           </View>
         </>
       )}
+
+      <VoucherQuickActions voucher={quickActionsFor} onClose={() => setQuickActionsFor(null)} />
     </ScrollView>
   );
 }

@@ -1,7 +1,5 @@
 import { format, parseISO } from 'date-fns';
-import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { Check, ChevronLeft, Pencil, Share, Trash2 } from 'lucide-react-native';
 import { useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
@@ -12,12 +10,13 @@ import { ExpiryCard } from '@/components/detail/ExpiryCard';
 import { VoucherPhoto } from '@/components/detail/VoucherPhoto';
 import { ReminderOptions } from '@/components/form/ReminderOptions';
 import { AmountField, CategoryPicker, ExpiryField, Field, Input } from '@/components/form/VoucherFields';
+import { useVoucherActions } from '@/hooks/useVoucherActions';
 import { useVoucherEditor } from '@/hooks/useVoucherEditor';
 import { categoryLabel } from '@/lib/categories';
 import { formatMoney } from '@/lib/format';
+import { haptics } from '@/lib/haptics';
 import { goBackOrHome } from '@/lib/navigation';
-import { cancelVoucherReminders } from '@/lib/notifications';
-import { deletePhotos, photoFileUri } from '@/lib/photos';
+import { photoFileUri } from '@/lib/photos';
 import { remindersSummary, upcomingReminders } from '@/lib/reminders';
 import { useClipprStore, useHydrated } from '@/lib/store';
 import { colors } from '@/lib/theme';
@@ -41,8 +40,7 @@ export default function VoucherDetailScreen() {
 
 function VoucherDetail({ voucher }: { voucher: Voucher }) {
   const editor = useVoucherEditor(voucher);
-  const markUsed = useClipprStore((s) => s.markUsed);
-  const deleteVoucher = useClipprStore((s) => s.deleteVoucher);
+  const { share, markUsed, remove: removeVoucher } = useVoucherActions(voucher);
   const notifyAt = useClipprStore((s) => s.settings.notifyAt);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -50,33 +48,20 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
   const photoUri = photoFileUri(voucher.photoUri);
   const active = voucher.status === 'active';
 
-  const share = async () => {
-    if (!photoUri || !(await Sharing.isAvailableAsync())) return;
-    try {
-      await Sharing.shareAsync(photoUri, { mimeType: 'image/jpeg', UTI: 'public.jpeg', dialogTitle: voucher.storeName });
-    } catch (error) {
-      console.warn('Clippr: could not share the photo', error);
-    }
-  };
-
   const remove = () => {
     setConfirmingDelete(false);
     // Leave first, so the screen doesn't flash its "not found" state while it animates away.
     goBackOrHome();
-    cancelVoucherReminders(voucher).catch((error: unknown) => console.warn('Clippr: could not cancel reminders', error));
-    deletePhotos([voucher.photoUri, voucher.thumbnailUri]);
-    deleteVoucher(voucher.id);
+    removeVoucher();
   };
 
   const finish = () => {
-    markUsed(voucher.id);
-    cancelVoucherReminders(voucher).catch((error: unknown) => console.warn('Clippr: could not cancel reminders', error));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    markUsed();
     goBackOrHome();
   };
 
   const save = () => {
-    if (editor.save()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (editor.save()) haptics.success();
   };
 
   const what = photoUri ? 'Its photo, details' : 'Its details';
@@ -125,7 +110,17 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
             <Button key="save" label="Save changes" icon={Check} grow onPress={save} />
           ) : (
             <>
-              <Button key="delete" label="Delete" icon={Trash2} variant="outline" grow={!active} onPress={() => setConfirmingDelete(true)} />
+              <Button
+                key="delete"
+                label="Delete"
+                icon={Trash2}
+                variant="outline"
+                grow={!active}
+                onPress={() => {
+                  haptics.warning();
+                  setConfirmingDelete(true);
+                }}
+              />
               {active ? <Button key="used" label="Mark as used" icon={Check} grow onPress={finish} /> : null}
             </>
           )}

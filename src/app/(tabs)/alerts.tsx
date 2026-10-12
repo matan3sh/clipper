@@ -1,9 +1,10 @@
 import { format } from 'date-fns';
 import { router, useFocusEffect } from 'expo-router';
-import { Paperclip } from 'lucide-react-native';
+import { BellOff, ChevronRight, Paperclip } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useNotificationStatus } from '@/hooks/useNotificationStatus';
 import { formatMoney } from '@/lib/format';
 import { notificationText, reminderLabel, splitByWeek, upcomingReminders, type UpcomingReminder } from '@/lib/reminders';
 import { useClipprStore, useHydrated } from '@/lib/store';
@@ -18,6 +19,7 @@ export default function AlertsScreen() {
   const hydrated = useHydrated();
   const vouchers = useClipprStore((s) => s.vouchers);
   const notifyAt = useClipprStore((s) => s.settings.notifyAt);
+  const { status } = useNotificationStatus();
   // Re-read the clock whenever the tab comes into view, so reminders that just fired drop off.
   const [now, setNow] = useState(() => new Date());
   useFocusEffect(useCallback(() => setNow(new Date()), []));
@@ -34,6 +36,8 @@ export default function AlertsScreen() {
   }
 
   const next = upcoming[0];
+  // Reminders exist in the app but iOS won't deliver them until notifications are turned back on.
+  const blocked = status !== null && status !== 'granted' && upcoming.length > 0;
 
   return (
     <ScrollView className="flex-1 bg-paper" contentContainerClassName="gap-5 px-gutter pb-36 pt-safe-top">
@@ -44,9 +48,13 @@ export default function AlertsScreen() {
         <Text className="font-body text-[15px] leading-[22px] text-muted">
           {upcoming.length === 0
             ? 'Nothing scheduled yet'
-            : `${upcoming.length} ${upcoming.length === 1 ? 'reminder' : 'reminders'} scheduled on this phone`}
+            : blocked
+              ? `${upcoming.length} ${upcoming.length === 1 ? 'reminder' : 'reminders'} ready — notifications are off`
+              : `${upcoming.length} ${upcoming.length === 1 ? 'reminder' : 'reminders'} scheduled on this phone`}
         </Text>
       </View>
+
+      {blocked ? <NotificationsOffNotice /> : null}
 
       {next ? (
         <>
@@ -65,6 +73,27 @@ export default function AlertsScreen() {
         </View>
       )}
     </ScrollView>
+  );
+}
+
+/** Shown when reminders exist but iOS notifications are off; opens Settings to turn them back on. */
+function NotificationsOffNotice() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Notifications are off. Open Settings to turn them on"
+      onPress={() => Linking.openSettings()}
+      className="flex-row items-center gap-3 rounded-card bg-warning-wash p-3.5 active:opacity-80"
+    >
+      <BellOff size={20} color={colors.warning} strokeWidth={2.2} />
+      <View className="flex-1 gap-px">
+        <Text className="font-display text-body-sm text-warning">Notifications are off</Text>
+        <Text className="font-body text-caption text-warning">
+          These reminders won&apos;t arrive until you turn them on in Settings.
+        </Text>
+      </View>
+      <ChevronRight size={18} color={colors.warning} strokeWidth={2.2} />
+    </Pressable>
   );
 }
 

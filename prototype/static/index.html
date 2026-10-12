@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clippr Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&amp;display=swap">
+<style>
+  body { margin: 0; background: #ffffff; color: #1b1830; font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'ss01'; letter-spacing: -0.02em; }
+  main { max-width: 1200px; margin: 0 auto; padding: 48px 16px 80px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: #5541e0; }
+  h1 { margin: 6px 0 8px; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; }
+  p { margin: 0; font-size: 16px; font-weight: 500; color: #625e78; }
+  h2 { margin: 48px 0 16px; font-size: 20px; font-weight: 600; letter-spacing: -0.03em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
+  a.card { display: flex; flex-direction: column; gap: 10px; color: inherit; text-decoration: none; }
+  .thumb { width: 180px; height: 390px; border-radius: 32px; overflow: hidden; background: #f8f7fd; box-shadow: 0 0 0 1px rgba(23, 19, 46, 0.08); position: relative; }
+  .thumb iframe { width: 390px; height: 844px; border: 0; transform: scale(0.4615); transform-origin: 0 0; pointer-events: none; position: absolute; left: 0; top: 0; }
+  a.card:hover .thumb { box-shadow: 0 0 0 2px #17132e; }
+  .name { font-size: 15px; font-weight: 600; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .reset { height: 48px; padding: 0 20px; border: 1px solid #d3d0e3; border-radius: 100px; background: #ffffff; color: #1b1830; font: inherit; font-weight: 600; cursor: pointer; }
+  .start { display: inline-flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 100px; background: #17132e; color: #ffffff; font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Clippr v0 · clickable prototype</div>
+  <h1>Screen map</h1>
+  <p>Open any screen, then tap through. Everything is linked.</p>
+  <div class="actions">
+    <a class="start" href="Main.html">Start on Home</a>
+    <button class="reset" type="button" id="reset">Reset prototype</button>
+  </div>
+
+  <h2>Tabs and detail</h2>
+  <div class="grid">
+    <a class="card" href="Main.html"><div class="thumb"><iframe src="Main.html" title="Home" tabindex="-1" loading="lazy"></iframe></div><span class="name">Home</span></a>
+    <a class="card" href="Empty.html"><div class="thumb"><iframe src="Empty.html" title="Home, empty" tabindex="-1" loading="lazy"></iframe></div><span class="name">Home · empty</span></a>
+    <a class="card" href="Detail.html"><div class="thumb"><iframe src="Detail.html" title="Detail" tabindex="-1" loading="lazy"></iframe></div><span class="name">Detail</span></a>
+    <a class="card" href="Reminders.html"><div class="thumb"><iframe src="Reminders.html" title="Alerts" tabindex="-1" loading="lazy"></iframe></div><span class="name">Alerts</span></a>
+    <a class="card" href="Settings.html"><div class="thumb"><iframe src="Settings.html" title="Settings" tabindex="-1" loading="lazy"></iframe></div><span class="name">Settings</span></a>
+  </div>
+
+  <h2>Add a voucher</h2>
+  <div class="grid">
+    <a class="card" href="Scan.html"><div class="thumb"><iframe src="Scan.html" title="Capture" tabindex="-1" loading="lazy"></iframe></div><span class="name">1 · Capture</span></a>
+    <a class="card" href="Analyze.html"><div class="thumb"><iframe src="Analyze.html" title="Analyze" tabindex="-1" loading="lazy"></iframe></div><span class="name">2 · Analyze</span></a>
+    <a class="card" href="Review.html"><div class="thumb"><iframe src="Review.html" title="Details" tabindex="-1" loading="lazy"></iframe></div><span class="name">3 · Details</span></a>
+    <a class="card" href="SetReminders.html"><div class="thumb"><iframe src="SetReminders.html" title="Reminders" tabindex="-1" loading="lazy"></iframe></div><span class="name">4 · Reminders</span></a>
+  </div>
+</main>
+<script>
+  document.getElementById('reset').addEventListener('click', () => {
+    try { Object.keys(localStorage).filter((k) => k.startsWith('clippr.')).forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+    location.reload();
+  });
+</script>
+</body>
+</html>

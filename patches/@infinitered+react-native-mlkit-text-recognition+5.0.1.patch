@@ -1,0 +1,21 @@
+diff --git a/node_modules/@infinitered/react-native-mlkit-text-recognition/ios/RNMLKitTextRecord.swift b/node_modules/@infinitered/react-native-mlkit-text-recognition/ios/RNMLKitTextRecord.swift
+index 7672854..f83fb8e 100644
+--- a/node_modules/@infinitered/react-native-mlkit-text-recognition/ios/RNMLKitTextRecord.swift
++++ b/node_modules/@infinitered/react-native-mlkit-text-recognition/ios/RNMLKitTextRecord.swift
+@@ -1,6 +1,7 @@
+ import ExpoModulesCore
+ import MLKitCommon
+ import MLKitTextRecognition
++import MLKitTextRecognitionCommon
+ 
+ struct RectRecord: Record {
+     @Field var left: Double = 0.0
+@@ -70,7 +71,7 @@ func mapTextBlockToRecord(_ textBlock: TextBlock) -> BlockRecord {
+     )
+ }
+ 
+-func mapTextToRecord(_ text: Text) -> TextRecord {
++func mapTextToRecord(_ text: MLKitTextRecognitionCommon.Text) -> TextRecord {
+     return TextRecord(
+         text: text.text,
+         blocks: text.blocks.map(mapTextBlockToRecord)

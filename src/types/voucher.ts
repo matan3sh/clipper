@@ -45,8 +45,13 @@ export interface Voucher {
   currency: CurrencyCode;
   /** ISO date (yyyy-MM-dd), or null for vouchers that never expire. */
   expiryDate: string | null;
-  /** Local file URI of the full photo, copied into the app's document directory. */
+  /**
+   * Full photo, as a path relative to the app's document directory (e.g. `vouchers/abc.jpg`).
+   * Relative because the iOS container path changes between installs. Resolve with `photoFileUri()`.
+   * Empty for the sample vouchers.
+   */
   photoUri: string;
+  /** Small JPEG for lists, relative like `photoUri`. */
   thumbnailUri?: string;
   /** ML Kit scan quality, 0–100. */
   scanQuality: number;

@@ -13,6 +13,10 @@ export const colors = {
   action: '#17132e',
   accent: '#6c56fc',
   paper: '#ffffff',
+  hairline: '#e7e5f1',
+  border: '#d3d0e3',
+  washInk: '#3d2fb0',
+  danger: '#c93c3c',
 } as const;
 
 export const shadows = {

@@ -17,6 +17,20 @@ export function formatMoney(amount: number, code: CurrencyCode): string {
   return whole + cents;
 }
 
+/** Parses what the user typed in an amount field ("40", "40.5", "40,50", "1,250.00"); null unless it's a positive number. */
+export function parseAmountInput(text: string): number | null {
+  const trimmed = text.trim().replace(/\s/g, '');
+  if (!/^\d[\d,]*(?:[.,]\d{1,2})?$/.test(trimmed)) return null;
+  const normalized = /,\d{3}(?!\d)/.test(trimmed) ? trimmed.replace(/,/g, '') : trimmed.replace(',', '.');
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) && value > 0 ? Math.round(value * 100) / 100 : null;
+}
+
+/** An amount as it should appear in an editable field: two decimals, no symbol, no thousands separators. */
+export function amountInputText(amount: number): string {
+  return amount.toFixed(2);
+}
+
 /** Whole days from today until expiry; negative once expired, null when the voucher never expires. */
 export function daysUntil(expiryDate: string | null): number | null {
   if (!expiryDate) return null;

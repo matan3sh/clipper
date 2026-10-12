@@ -12,6 +12,8 @@ module.exports = {
         paper: '#ffffff', // page canvas, cards
         surface: '#f8f7fd', // secondary pills, icon tiles, panels
         hairline: '#e7e5f1', // list dividers, empty tracks
+        // Same value as hairline, for borders: `border-hairline` is NativeWind's hairline-*width* utility.
+        divider: '#e7e5f1', // border-divider
         border: '#d3d0e3', // input and outline-button borders
         ink: '#1b1830', // primary text
         muted: '#625e78', // secondary text (6:1 on paper)

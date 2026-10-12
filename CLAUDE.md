@@ -30,6 +30,8 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
   NativeWind v4 remounts the component, and in dev that throws "Couldn't find a navigation context".
   Toggle shadows with `style={{ boxShadow: active ? shadows.button : undefined }}` from `src/lib/theme.ts`.
   Changing colors, opacity and spacing classes is fine.
+- **Borders use `border-divider`, never `border-hairline`.** NativeWind's preset defines `border-hairline` as a
+  hairline border *width* on all sides, so it draws a box instead of applying our hairline color.
 - 20px gutter (`px-gutter`), `pt-safe-top` (58px) top inset, 44px minimum touch targets.
 
 ## Build rules
@@ -37,16 +39,20 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - No `any`: use `unknown` plus type guards. Functional components and hooks. Explicit loading states.
 - NativeWind for all styling. `StyleSheet.create` only where Reanimated needs it.
 - Zustand for all app data. `useState` only for local UI state.
-- Install packages with `npx expo install`. Run `npx tsc --noEmit` and `npx expo lint` before calling anything done.
+- Install packages with `npx expo install`. Run `npx tsc --noEmit`, `npx expo lint` and `npm test` before calling anything done.
 - English only. RTL is not required.
 
 ## Current phase
-Phase 2 — Data layer + Home list: built, awaiting approval. (Phase 1 approved 2026-10-12.)
+Phase 3 — Add-voucher flow: built and merged, awaiting approval. (Phases 1–2 approved 2026-10-12.) Phase 4 is next.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)
 - `src/lib/store.ts`: Zustand store (Phase 2)
-- `src/lib/mlkit.ts`: OCR and quality scoring (Phase 3)
+- `src/lib/mlkit.ts`: runs ML Kit OCR on a photo (Phase 3)
+- `src/lib/voucherParsing.ts`: pure store/amount/expiry parsing and quality scoring, unit-tested (Phase 3)
+- `src/lib/photos.ts`: photo prep, storage as relative paths, thumbnails, `photoFileUri`, `deletePhotos` (Phase 3)
+- `src/lib/reminders.ts`: reminder dates and `buildReminders` (Phase 3, reused by Phase 4)
+- `src/hooks/useVoucherDraft.ts` + `src/components/add-voucher/`: the 4-step add flow (Phase 3)
 - `src/lib/notifications.ts`: reminder scheduling (Phase 4)
 - `src/components/VoucherCard.tsx`: paper-stack card (Phase 2)
 - `tailwind.config.js`: design tokens

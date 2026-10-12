@@ -43,7 +43,7 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - English only. RTL is not required.
 
 ## Current phase
-Phase 5 — Settings screen, denied-permission handling, Used filter and dimmed cards: built on `feature/settings-and-polish`, awaiting approval. (Phases 1–4 merged.) Remaining polish (haptics, pull-to-refresh, long-press) is a later branch.
+Phase 5 first slice — Settings screen, denied-notification handling, Used filter and dimmed cards: merged to `main` (PR #5). (Phases 1–4 merged.) Phase 5 polish (haptics, pull-to-refresh, long-press, denied-camera handling) is the next branch and needs a go-ahead.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)

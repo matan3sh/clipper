@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–3 done** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2)). Phase 3 is **awaiting the user's approval**; Phase 4 (notifications, Detail, Alerts) is next and needs a go-ahead. |
+| Status | **Phases 1–3 done** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). Phase 3 is **awaiting the user's approval**; Phase 4 (notifications, Detail, Alerts) is next and needs a go-ahead. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -72,6 +72,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/lib/photos.ts` | ✅ `preparePhoto` (EXIF-upright, max 2000px), `persistPhoto` (photo + 360px thumb), `photoFileUri`, `deletePhotos` |
 | `src/lib/reminders.ts` | ✅ `reminderDate`, `isReminderPast`, `buildReminders` (reuse in Phase 4) |
 | `src/lib/voucherForm.ts` | ✅ `DraftForm`, `validateForm` |
+| `src/lib/navigation.ts` | ✅ `goBackOrHome()`: use for every back/close button |
 | `src/lib/ids.ts` | ✅ `newId()` (moved out of the store so pure modules don't pull in AsyncStorage) |
 | `src/hooks/useVoucherDraft.ts` | ✅ Flow state: step, photo, analysis, form, reminders, `save()` |
 | `src/components/add-voucher/` | ✅ `FlowHeader`, `CaptureStep`, `AnalyzeStep`, `DetailsStep`, `RemindersStep` |
@@ -222,11 +223,12 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Same-slot conditionals and shadows.** `{a ? <View className="… shadow-paper" /> : <View className="…" />}` reuses one View and adds the shadow after first render, triggering the NativeWind remount crash. Give each branch a `key`.
 - **Photo picker.** Present it full screen (the default page sheet hangs in iOS 18 simulators), and never while a modal is still animating in: iOS drops the presentation and the promise never settles. `CaptureStep` waits for `transitionEnd`.
 - **Jest preset.** `@react-native/jest-preset` is pinned to the React Native version (0.86.3). Bump it with every RN upgrade, or tests fail with "Could not locate module react-native/setup-env".
+- **Back buttons.** Never call bare `router.back()`. A screen opened straight from a link (or a notification) has nothing below it and throws "GO_BACK was not handled". Use `goBackOrHome()`; the root layout also anchors the stack to `(tabs)`.
 - **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
 **Git state as of 2026-10-12**
-- The checkout is on `main`, in sync with GitHub (merge commit `0b0ee6b` for PR #2).
-- Merged branches `feature/foundation-and-home` and `feature/add-voucher-flow` are deleted locally and on GitHub.
+- The checkout is on `main`, in sync with GitHub (merge commit `d666587` for PR #3).
+- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow` and `fix/add-voucher-back-navigation` are deleted locally and on GitHub.
 - `HANDOFF.md` is committed on `main`.
 
 ## Decisions made

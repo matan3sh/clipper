@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -5,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ExpiryBadge } from '@/components/ExpiryBadge';
 import { CATEGORY_ICONS, categoryLabel } from '@/lib/categories';
 import { expiryState, formatMoney, formatShortDate } from '@/lib/format';
+import { photoFileUri } from '@/lib/photos';
 import { colors } from '@/lib/theme';
 import type { Voucher } from '@/types/voucher';
 
@@ -18,6 +20,7 @@ interface VoucherCardProps {
 export function VoucherCard({ voucher, index }: VoucherCardProps) {
   const state = expiryState(voucher);
   const Icon = CATEGORY_ICONS[voucher.category];
+  const thumbnail = photoFileUri(voucher.thumbnailUri);
   const expired = state === 'expired';
   const subtitle = voucher.expiryDate
     ? `${categoryLabel(voucher.category)} · ${expired ? 'Expired' : 'Exp'} ${formatShortDate(voucher.expiryDate)}`
@@ -38,8 +41,12 @@ export function VoucherCard({ voucher, index }: VoucherCardProps) {
         <View
           className={`flex-row items-center gap-3 rounded-card bg-paper p-3 shadow-paper-ring ${expired ? 'opacity-60' : ''}`}
         >
-          <View className="h-[52px] w-[52px] items-center justify-center rounded-card bg-surface">
-            <Icon size={22} color={colors.ink} strokeWidth={1.9} />
+          <View className="h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-card bg-surface">
+            {thumbnail ? (
+              <Image source={{ uri: thumbnail }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <Icon size={22} color={colors.ink} strokeWidth={1.9} />
+            )}
           </View>
           <View className="min-w-0 flex-1 gap-0.5">
             <Text numberOfLines={1} className="font-display text-body text-ink">

@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, after Phase 3 and the back-navigation fix)
+# Clippr — handoff (updated 2026-10-12, Phase 4 in review)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–3 done** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). Phase 3 is **awaiting the user's approval**; Phase 4 (notifications, Detail, Alerts) is next and needs a go-ahead. |
+| Status | **Phases 1–3 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). **Phase 4** (notifications, Detail, Alerts) is built on `feature/notifications-and-detail`, [PR #4](https://github.com/matan3sh/clipper/pull/4) open, **awaiting review/approval and merge**. Phase 5 is next. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -40,7 +40,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 1. **Capture:** the camera, or a photo from the library
 2. **Analyze:** ML Kit OCR, a 0–100 quality score, and fields filled in from the photo
 3. **Details:** store name, amount and currency, expiry date picker, category
-4. **Reminders:** toggles for 7d / 3d / 1d / on the day, plus a custom day count. Saved on the voucher now; **Phase 4** schedules them with expo-notifications and stores the notification IDs.
+4. **Reminders:** toggles for 7d / 3d / 1d / on the day, plus a custom day count. Scheduled with expo-notifications on save; each `notificationId` is stored on its reminder.
 5. **Save:** `addVoucher()`, then back to Home
 
 **Other flows**
@@ -59,10 +59,10 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/app/_layout.tsx` | ✅ Font loading, splash screen, Stack, route `ErrorBoundary`; `unstable_settings.anchor = '(tabs)'` |
 | `src/app/(tabs)/_layout.tsx` | ✅ Tabs with the custom `TabBar` |
 | `src/app/(tabs)/index.tsx` | ✅ Home: total, banner, filters, list, empty state |
-| `src/app/(tabs)/alerts.tsx` | ⏳ placeholder (Phase 4) |
+| `src/app/(tabs)/alerts.tsx` | ✅ Alerts: next-reminder preview, This week / Later (Phase 4) |
 | `src/app/(tabs)/settings.tsx` | ⏳ placeholder (Phase 5) |
 | `src/app/voucher/new.tsx` | ✅ The 4-step add flow; opens as a `fullScreenModal`. `?source=library` opens the picker on arrival |
-| `src/app/voucher/[id].tsx` | ⏳ placeholder showing the route id (Phase 4) |
+| `src/app/voucher/[id].tsx` | ✅ Detail: photo panel + viewer, expiry card, inline edit, share, delete, mark as used (Phase 4) |
 | `src/lib/store.ts` | ✅ Store (`addVoucher`, `updateVoucher`, `deleteVoucher`, `markUsed`, …), `useHydrated()`, `activeVouchers()`, `defaultReminders()` |
 | `src/lib/format.ts` | ✅ Money, `daysUntil`, `expiryState`, chip labels, `byExpiry` sort |
 | `src/lib/categories.ts` | ✅ Lucide icon and label per category |
@@ -77,8 +77,13 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/hooks/useVoucherDraft.ts` | ✅ Flow state: step, photo, analysis, form, reminders, `save()` |
 | `src/components/add-voucher/` | ✅ `FlowHeader`, `CaptureStep`, `AnalyzeStep`, `DetailsStep`, `RemindersStep` |
 | `src/components/Button.tsx`, `Sheet.tsx` | ✅ Shared pill button (primary/outline) and bottom sheet |
-| `src/lib/__tests__/` | ✅ 29 Jest tests (jest-expo) |
-| `src/lib/notifications.ts` | ⏳ Phase 4 |
+| `src/lib/__tests__/` | ✅ 35 Jest tests (jest-expo) |
+| `src/lib/notifications.ts` | ✅ `scheduleVoucherReminders`, `cancelVoucherReminders`, `syncAllReminders` (serialized queue; cancels by stored id and by `data.voucherId` tag; sync caps at 60 for the iOS 64 limit) |
+| `src/hooks/useNotificationRouting.ts` | ✅ Sync at launch and on every return to foreground; notification tap (incl. cold start) → Detail |
+| `src/hooks/useVoucherEditor.ts` | ✅ Detail's edit mode; save reschedules reminders |
+| `src/components/form/` | ✅ `VoucherFields` (Field, Input, AmountField, ExpiryField, CategoryPicker) and `ReminderOptions`, shared by the add flow and Detail |
+| `src/components/detail/` | ✅ `VoucherPhoto` (tilted photo or drawn voucher, pinch-zoom viewer), `ExpiryCard` |
+| `src/components/ConfirmSheet.tsx` | ✅ Confirmation bottom sheet |
 | `src/types/voucher.ts` | ✅ Data model, `CATEGORIES`, `CURRENCIES`, `PRESET_REMINDER_DAYS`, `qualityTier()` |
 | `src/components/` | ✅ `TabBar`, `VoucherCard`, `ExpiryBadge`, `ExpiringBanner`, `FilterPills`, `EmptyState`, `Placeholder`, `Button`, `Sheet` |
 | `CLAUDE.md` / `AGENTS.md` | ✅ AI context (`CLAUDE.md` imports `AGENTS.md`, Expo's own guidance) |
@@ -198,7 +203,7 @@ npm test
 npx expo-doctor
 ```
 
-All four pass on `main` (29 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
+All four pass on `main` and on the Phase 4 branch (35 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
 
 **Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher image ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos, and one voucher saved from it (USD, books, reminders 3/2/1 days) is in the app's data alongside the 4 seed vouchers. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
 
@@ -218,7 +223,9 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **NativeWind v4 shadows.** Never add or remove a `shadow-*` class after the first render. The component remounts and the dev build throws "Couldn't find a navigation context". Toggle shadows with `style={{ boxShadow: ... }}` from `src/lib/theme.ts`. Changing colors, spacing and opacity classes is fine.
 - **Store selectors.** `activeVouchers()` builds a new array, so call it inside `useMemo`, never as a `useClipprStore` selector (that loops in Zustand 5).
 - **Hydration.** `useHydrated()` reads persist's own flag, which never writes. If the stored data can't be read, the store writes nothing, so a failed read can't overwrite saved vouchers.
-- **Simulator screenshots** lag one frame behind, so take a second one after each tap. Taps made during a navigation animation are dropped.
+- **Simulator screenshots** lag behind — sometimes several seconds, which can look like a frozen screen. Wait and take another before concluding a tap failed. Taps made during a navigation or modal animation are dropped.
+- **Testing notifications.** `xcrun simctl push <udid> com.clippr.app push.json` with `{"aps":{"alert":{...}},"body":{"voucherId":"<id>"}}` delivers a banner whose tap goes through the real routing. Simulator notification permission can't be reset with `simctl privacy`.
+- **Fast Refresh mid-edit.** Saving a file that uses a new import before the import is added throws once and can leave the app wedged; relaunch it.
 - **Prototype server.** Python's `http.server` hangs at bind time (reverse-DNS lookup), so use `node prototype/serve.mjs`. The Claude preview launcher in `.claude/launch.json` can't read the Documents folder, so start the server from a shell with the sandbox disabled.
 - **`border-hairline` is not our color.** NativeWind's preset defines it as a hairline border *width* on all sides, so it draws a box. Use `border-divider` (same hex) for borders; `bg-hairline` and `text-*` are fine.
 - **Same-slot conditionals and shadows.** `{a ? <View className="… shadow-paper" /> : <View className="…" />}` reuses one View and adds the shadow after first render, triggering the NativeWind remount crash. Give each branch a `key`.
@@ -273,14 +280,12 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
 2. **Get the user's approval for Phase 3**, and ideally a test on a real iPhone (camera capture is unverified in the Simulator).
-3. **Phase 4** (wait for the go-ahead; new branch such as `feature/notifications-and-detail`):
-   - Notifications in `src/lib/notifications.ts`: `scheduleVoucherReminders` and `cancelVoucherReminders`, with the permission request on first launch. Use `reminderDate()` from `src/lib/reminders.ts` and store each `notificationId` on its reminder.
-   - Schedule at save time in `useVoucherDraft.save()`, and also **schedule reminders for vouchers saved before Phase 4** (they have reminders but no `notificationId`).
-   - The Detail screen: photo zoom (`photoFileUri(voucher.photoUri)`), inline edit, reminders, delete with confirmation (`cancelVoucherReminders`, then `deletePhotos([photoUri, thumbnailUri])`, then `deleteVoucher`), share.
-   - Consider showing `thumbnailUri` on Home's `VoucherCard` instead of the category icon when a photo exists.
-   - The Alerts tab.
+3. **Phase 4: review and merge [PR #4](https://github.com/matan3sh/clipper/pull/4)** once the user approves (`gh pr merge 4 --merge --delete-branch`, then delete the local branch and pull `main`). Delete and Mark as used were reviewed but not run end to end in the Simulator (to keep the test data).
 4. **Phase 5:**
-   - The Settings screen
+   - The Settings screen (changing `notifyAt` must call `syncAllReminders()`)
+   - Denied notification permission: Alerts still says "N reminders scheduled"; show a notice instead
+   - Somewhere to see used vouchers (or drop "Mark as used")
+   - Per-voucher scheduling doesn't enforce the 64-notification iOS limit (the launch sync does)
    - Haptics, pull-to-refresh, long-press quick actions
    - Greying out expired vouchers
    - Handling denied camera or notification permission

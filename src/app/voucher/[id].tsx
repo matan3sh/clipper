@@ -1,8 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Placeholder } from '@/components/Placeholder';
+import { goBackOrHome } from '@/lib/navigation';
 import { colors } from '@/lib/theme';
 
 export default function VoucherDetailScreen() {
@@ -13,7 +14,7 @@ export default function VoucherDetailScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Back"
-        onPress={() => router.back()}
+        onPress={goBackOrHome}
         className="h-11 w-11 items-center justify-center rounded-pill bg-surface"
       >
         <ChevronLeft size={20} color={colors.ink} strokeWidth={2.2} />

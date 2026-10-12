@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, after the Phase 5 merge)
+# Clippr — handoff (updated 2026-10-12, after the Phase 5 polish merge — v0 feature-complete)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–4 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1)–[PR #4](https://github.com/matan3sh/clipper/pull/4)). **Phase 5 first slice** (Settings screen, denied-notification handling, Home "Used" filter, dimmed used/expired cards) merged via [PR #5](https://github.com/matan3sh/clipper/pull/5), merged by the user but not yet explicitly signed off. **Phase 5 polish** (haptics, pull-to-refresh, long-press quick actions) is the next branch. |
+| Status | **Phases 1–5 merged** to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1)–[PR #6](https://github.com/matan3sh/clipper/pull/6)). Phase 5 was two PRs: the Settings/permissions/Used-filter slice ([PR #5](https://github.com/matan3sh/clipper/pull/5)) and the haptics/pull-to-refresh/long-press polish ([PR #6](https://github.com/matan3sh/clipper/pull/6)). **v0 is feature-complete**; what remains is a real-device pass and optional extras. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -62,6 +62,8 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/app/(tabs)/alerts.tsx` | ✅ Alerts: next-reminder preview, This week / Later (Phase 4) |
 | `src/app/(tabs)/settings.tsx` | ✅ Settings: default reminders, notify-time picker (reschedules on close), currency, permission status, storage count/size, delete-all (Phase 5) |
 | `src/hooks/useNotificationStatus.ts` | ✅ Notification permission, re-read on foreground (Phase 5) |
+| `src/lib/haptics.ts` | ✅ Fire-and-forget haptic feedback wrapper (Phase 5 polish) |
+| `src/hooks/useVoucherActions.ts` + `src/components/VoucherQuickActions.tsx` | ✅ Shared share/mark-used/delete, and Home's long-press menu (Phase 5 polish) |
 | `src/app/voucher/new.tsx` | ✅ The 4-step add flow; opens as a `fullScreenModal`. `?source=library` opens the picker on arrival |
 | `src/app/voucher/[id].tsx` | ✅ Detail: photo panel + viewer, expiry card, inline edit, share, delete, mark as used (Phase 4) |
 | `src/lib/store.ts` | ✅ Store (`addVoucher`, `updateVoucher`, `deleteVoucher`, `markUsed`, …), `useHydrated()`, `activeVouchers()`, `defaultReminders()` |
@@ -237,8 +239,8 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
 **Git state as of 2026-10-12**
-- The checkout is on `main`, in sync with GitHub (merge commit `860b8b0` for PR #5).
-- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow`, `fix/add-voucher-back-navigation`, `feature/notifications-and-detail` and `feature/settings-and-polish` are deleted locally and on GitHub.
+- The checkout is on `main`, in sync with GitHub (merge commit `9846e70` for PR #6).
+- All six merged feature branches are deleted locally and on GitHub; `main` is the only branch.
 - `HANDOFF.md` is committed on `main`.
 
 ## Decisions made
@@ -280,14 +282,14 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 
 ## Next steps
 
+v0 is feature-complete. No phase is in flight; wait for the user's direction. Likely next:
+
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
-2. **Confirm Phases 4–5 with the user** and ideally test on a real iPhone (camera capture and real reminder delivery are unverified on a device).
-3. **Phase 5 polish** (wait for the go-ahead; new branch such as `feature/polish`):
-   - Haptics, pull-to-refresh on Home, long-press quick actions on cards
-   - Handling denied **camera** permission in the add flow (notification-denied is done)
-   - Per-voucher scheduling still doesn't enforce the 64-notification iOS limit (only the launch sync does)
-4. **Not fully verified in Phase 5** (worth a device/real check): the Alerts denied-notification notice (the Simulator keeps notifications granted and `simctl` can't revoke them) and expired-card dimming (no currently-expired seed vouchers).
-5. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
+2. **Real-device pass** (the main gap). Unverified on hardware: camera capture, real reminder delivery at the notify time, haptics (silent in the Simulator), and notification-tap routing from a real push. Also worth checking on a device, since the Simulator couldn't: the Alerts denied-notification notice (`simctl` can't revoke notification permission) and expired-card dimming (no currently-expired seed vouchers).
+3. **Known limitation:** per-voucher scheduling still doesn't enforce the 64-notification iOS cap — only the launch/foreground sync trims to 60. Only matters with dozens of vouchers.
+4. **Optional extras:** load the real Open Runde font (OFL, from GitHub — ask before downloading); haptics on the add/edit form's category and currency pickers; whatever new direction the user wants (e.g. export/backup, barcode display, more categories).
+
+If the user wants to keep building, treat a new chunk of work as its own phase: branch, `/review`, `/test`, PR.
 
 ## User's working rules
 

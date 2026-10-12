@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12)
+# Clippr — handoff (updated 2026-10-12, after Phase 3)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–2 done** and merged to `main` via [PR #1](https://github.com/matan3sh/clipper/pull/1). Phase 3 (the add-voucher flow) is next and **needs the user's go-ahead**. |
+| Status | **Phases 1–3 done** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2)). Phase 3 is **awaiting the user's approval**; Phase 4 (notifications, Detail, Alerts) is next and needs a go-ahead. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -61,16 +61,25 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/app/(tabs)/index.tsx` | ✅ Home: total, banner, filters, list, empty state |
 | `src/app/(tabs)/alerts.tsx` | ⏳ placeholder (Phase 4) |
 | `src/app/(tabs)/settings.tsx` | ⏳ placeholder (Phase 5) |
-| `src/app/voucher/new.tsx` | ⏳ placeholder with a step indicator (Phase 3); opens as a `fullScreenModal` |
+| `src/app/voucher/new.tsx` | ✅ The 4-step add flow; opens as a `fullScreenModal`. `?source=library` opens the picker on arrival |
 | `src/app/voucher/[id].tsx` | ⏳ placeholder showing the route id (Phase 4) |
 | `src/lib/store.ts` | ✅ Store, `useHydrated()`, `activeVouchers()`, `newId()`, `defaultReminders()` |
 | `src/lib/format.ts` | ✅ Money, `daysUntil`, `expiryState`, chip labels, `byExpiry` sort |
 | `src/lib/categories.ts` | ✅ Lucide icon and label per category |
 | `src/lib/theme.ts` | ✅ JS mirror of the tokens (icon colors, button shadow) |
-| `src/lib/mlkit.ts` | ⏳ Phase 3 |
+| `src/lib/mlkit.ts` | ✅ `analyzeImage(uri, size)`: runs ML Kit, then `analyzeOcr` |
+| `src/lib/voucherParsing.ts` | ✅ Pure parsing (store, amount, currency, expiry) and quality scoring; unit-tested |
+| `src/lib/photos.ts` | ✅ `preparePhoto` (EXIF-upright, max 2000px), `persistPhoto` (photo + 360px thumb), `photoFileUri`, `deletePhotos` |
+| `src/lib/reminders.ts` | ✅ `reminderDate`, `isReminderPast`, `buildReminders` (reuse in Phase 4) |
+| `src/lib/voucherForm.ts` | ✅ `DraftForm`, `validateForm` |
+| `src/lib/ids.ts` | ✅ `newId()` (moved out of the store so pure modules don't pull in AsyncStorage) |
+| `src/hooks/useVoucherDraft.ts` | ✅ Flow state: step, photo, analysis, form, reminders, `save()` |
+| `src/components/add-voucher/` | ✅ `FlowHeader`, `CaptureStep`, `AnalyzeStep`, `DetailsStep`, `RemindersStep` |
+| `src/components/Button.tsx`, `Sheet.tsx` | ✅ Shared pill button (primary/outline) and bottom sheet |
+| `src/lib/__tests__/` | ✅ 29 Jest tests (jest-expo) |
 | `src/lib/notifications.ts` | ⏳ Phase 4 |
 | `src/types/voucher.ts` | ✅ Data model, `CATEGORIES`, `CURRENCIES`, `PRESET_REMINDER_DAYS`, `qualityTier()` |
-| `src/components/` | ✅ `TabBar`, `VoucherCard`, `ExpiryBadge`, `ExpiringBanner`, `FilterPills`, `EmptyState`, `Placeholder` |
+| `src/components/` | ✅ `TabBar`, `VoucherCard`, `ExpiryBadge`, `ExpiringBanner`, `FilterPills`, `EmptyState`, `Placeholder`, `Button`, `Sheet` |
 | `CLAUDE.md` / `AGENTS.md` | ✅ AI context (`CLAUDE.md` imports `AGENTS.md`, Expo's own guidance) |
 
 **Data model** (`src/types/voucher.ts`)
@@ -78,7 +87,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
   - `id`, `storeName`, `category`, `amount`
   - `currency` (ISO code)
   - `expiryDate` (`yyyy-MM-dd`, or `null` for no expiry)
-  - `photoUri`, `thumbnailUri?`
+  - `photoUri`, `thumbnailUri?`: paths **relative** to the document directory (`vouchers/<id>.jpg`), because the iOS container path changes between installs. Resolve with `photoFileUri()`
   - `scanQuality` (0–100), `extractedText?`, `notes?`
   - `status` (`'active'` or `'used'`)
   - `reminders: Reminder[]`
@@ -178,15 +187,18 @@ npx expo run:ios --device B51E28EB-1377-4D13-B64E-F97977E4DB1D
 xcrun simctl openurl B51E28EB-1377-4D13-B64E-F97977E4DB1D "com.clippr.app://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
 ```
 
-**Checks** (there's no unit test suite yet, and `npm test` has no script):
+**Checks:**
 
 ```bash
 npx tsc --noEmit
 npx expo lint
+npm test
 npx expo-doctor
 ```
 
-All three pass on `main` (expo-doctor: 21/21).
+All four pass on `main` (29 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
+
+**Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
 
 **Clickable HTML prototype** (a design reference, not the app):
 
@@ -206,11 +218,15 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Hydration.** `useHydrated()` reads persist's own flag, which never writes. If the stored data can't be read, the store writes nothing, so a failed read can't overwrite saved vouchers.
 - **Simulator screenshots** lag one frame behind, so take a second one after each tap. Taps made during a navigation animation are dropped.
 - **Prototype server.** Python's `http.server` hangs at bind time (reverse-DNS lookup), so use `node prototype/serve.mjs`. The Claude preview launcher in `.claude/launch.json` can't read the Documents folder, so start the server from a shell with the sandbox disabled.
+- **`border-hairline` is not our color.** NativeWind's preset defines it as a hairline border *width* on all sides, so it draws a box. Use `border-divider` (same hex) for borders; `bg-hairline` and `text-*` are fine.
+- **Same-slot conditionals and shadows.** `{a ? <View className="… shadow-paper" /> : <View className="…" />}` reuses one View and adds the shadow after first render, triggering the NativeWind remount crash. Give each branch a `key`.
+- **Photo picker.** Present it full screen (the default page sheet hangs in iOS 18 simulators), and never while a modal is still animating in: iOS drops the presentation and the promise never settles. `CaptureStep` waits for `transitionEnd`.
+- **Jest preset.** `@react-native/jest-preset` is pinned to the React Native version (0.86.3). Bump it with every RN upgrade, or tests fail with "Could not locate module react-native/setup-env".
 - **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
 **Git state as of 2026-10-12**
-- The checkout is on `main`, in sync with GitHub (merge commit `2326be9` for PR #1).
-- The merged branch `feature/foundation-and-home` has been deleted locally.
+- The checkout is on `main`, in sync with GitHub (merge commit `0b0ee6b` for PR #2).
+- Merged branches `feature/foundation-and-home` and `feature/add-voucher-flow` are deleted locally and on GitHub.
 - `HANDOFF.md` is committed on `main`.
 
 ## Decisions made
@@ -230,6 +246,11 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
   - `Settings.notifyAt`
 - **"Mark as used"** stays on Detail next to Delete. It isn't in the spec, and the user hasn't decided whether to keep it.
 - **No onboarding screen.** The empty Home is the first-run experience.
+- **Quality score** (no OCR confidence on iOS): Sharp 35% (clean words, text height), Frame 25% (text coverage, resolution), Text 40% (fields found, line count). The Analyze screen shows these three bars; the design's "Light" bar became "Frame", since brightness can't be measured without pixel access.
+- **Parsing rules:** amount = a currency-marked number in the largest type (fallback: a decimal next to "value", "balance" and so on); expiry = a date next to "valid", "until" or "exp" (fallback: the latest date), day-first unless impossible; store = the largest block that isn't a price, date, code or stock phrase, title-cased if all caps.
+- **Add flow:** category is required (no default); expiry can be "No expiry"; the date picker starts at today. Amount fields show two decimals ("40.00").
+- **Reminders saved** are only the enabled, still-upcoming ones (like the seed data). A custom count that repeats a preset is dropped. The footer says "N reminders set"; **nothing is scheduled yet** (Phase 4).
+- **Camera failures:** a mount error (or no camera) falls back to the library; a single failed shot shows "Try again" and keeps the camera live.
 - **Past reminder dates** show as disabled, with "date already passed".
 - **Home's total** counts active, non-expired vouchers in the default currency.
 - **Filters:** "Expiring" means 30 days or less. The banner shows when something expires within 7 days.
@@ -248,34 +269,25 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 ## Next steps
 
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
-2. **Clean up `package.json`.** It still has a `reset-project` script pointing at the missing `scripts/reset-project.js`. Remove it in the Phase 3 PR.
-3. **Phase 3, the add-voucher flow** (wait for the user's go-ahead; work on a new branch such as `feature/add-voucher-flow`):
-   - The 4-step flow in `src/app/voucher/new.tsx`, with a step indicator.
-   - Capture with expo-camera, plus a library picker (expo-image-picker). The Home empty state already passes `source: 'library'`.
-   - `src/lib/mlkit.ts`: `analyzeImage(uri)` returns `{ quality, extractedText, suggestions }`.
-     - Amount regex: `/[₪$€£]?\s*\d+(?:[.,]\d{2})?/`
-     - Dates: DD/MM/YYYY, DD.MM.YY, or a written month
-     - Store name: the largest text block
-     - Below 65, offer "Rescan recommended" with a Retake button.
-   - Copy photos into the document directory (expo-file-system) and make a thumbnail (expo-image-manipulator).
-   - Details form: store name, category pills, amount, currency, native date picker, optional notes. Pre-fill from OCR.
-   - Reminder toggles (7/3/1/0 plus custom), then save to the store and go back to Home.
-4. **Phase 4:**
-   - Notifications in `src/lib/notifications.ts`: `scheduleVoucherReminders` and `cancelVoucherReminders`, with the permission request on first launch.
-   - The Detail screen: photo zoom, inline edit, reminders, delete with confirmation, share.
+2. **Get the user's approval for Phase 3**, and ideally a test on a real iPhone (camera capture is unverified in the Simulator).
+3. **Phase 4** (wait for the go-ahead; new branch such as `feature/notifications-and-detail`):
+   - Notifications in `src/lib/notifications.ts`: `scheduleVoucherReminders` and `cancelVoucherReminders`, with the permission request on first launch. Use `reminderDate()` from `src/lib/reminders.ts` and store each `notificationId` on its reminder.
+   - Schedule at save time in `useVoucherDraft.save()`, and also **schedule reminders for vouchers saved before Phase 4** (they have reminders but no `notificationId`).
+   - The Detail screen: photo zoom (`photoFileUri(voucher.photoUri)`), inline edit, reminders, delete with confirmation (`cancelVoucherReminders`, then `deletePhotos([photoUri, thumbnailUri])`, then `deleteVoucher`), share.
+   - Consider showing `thumbnailUri` on Home's `VoucherCard` instead of the category icon when a photo exists.
    - The Alerts tab.
-5. **Phase 5:**
+4. **Phase 5:**
    - The Settings screen
    - Haptics, pull-to-refresh, long-press quick actions
    - Greying out expired vouchers
    - Handling denied camera or notification permission
-6. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
+5. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
 
 ## User's working rules
 
 - **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 3 without a go-ahead.
 - **Git:** work on feature branches with a PR per chunk of work. Use Conventional Commits.
-  - Before committing, run `/review`, then `/test`.
+  - Before committing, run `/review`, then `/test` (`npm test`).
   - If a change touches more than 10 files, ask whether to split it into branches.
   - Commit and push only when asked.
   - **`HANDOFF.md` always lives on `main`.** Commit handoff updates straight to `main` as `docs(handoff): …`, with no feature branch or PR. Doing this from a feature branch: stash the file, switch to `main`, pull, pop the stash, commit, push, then switch back.

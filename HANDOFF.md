@@ -1,256 +1,285 @@
 # Clippr — handoff (updated 2026-10-12)
 
-Paste this into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
+Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
 ## The project
 
-**Clippr** is an iOS-first React Native / Expo app for storing store vouchers and credit notes. It tracks expiry dates, stores vouchers as photos, scores scan quality on-device with ML Kit, and sends local push notifications before vouchers expire.
+**Clippr** is an iOS-first React Native / Expo wallet for store vouchers and credit notes. It:
+- stores each voucher as a photo
+- tracks expiry dates
+- reads the voucher and scores scan quality on-device with ML Kit
+- sends local notifications before a voucher expires
 
-This is a **feasibility build (v0)**: lean, with **no auth, no backend and no cloud**. AsyncStorage is the whole database, and nothing leaves the device.
+**Scope:** a feasibility build (v0). No auth, no backend, no cloud. AsyncStorage is the whole database, and nothing leaves the device.
 
-- Project folder: `/Users/matanshaviro/Documents/react-native/clipper` (not a git repo yet)
-- Status: **design phase is done**, with a clickable HTML prototype. The Expo app itself hasn't been started.
-
-## Architecture (from the user's spec, `~/Downloads/clippr-architecture.jsx`)
-
-Layers:
-- **UI:** Home (list, filter, banner), Add voucher (4-step flow), Detail (edit, delete), Alerts (reminders), Settings (defaults)
-- **State:** a Zustand store, persisted to AsyncStorage
-- **On-device services:** ML Kit (OCR + quality), expo-camera, expo-notifications, expo-haptics. No external API calls.
-
-The main flow, which is the only real flow in v0:
-1. **Capture:** the camera opens, or the user picks from the library. The image URI is saved to state.
-2. **Analyze:** ML Kit runs on-device. OCR extracts text, a quality score from 0–100 is computed, and fields are filled in automatically.
-3. **Fill details:** store name (editable), amount and currency, an expiry date picker, and a category selector.
-4. **Set reminders:** toggles for 7d / 3d / 1d / 0d plus a custom day count. expo-notifications schedules them, and the notification IDs are saved on the voucher.
-5. **Save:** `addVoucher()` runs, AsyncStorage persists it, the app returns to Home, and the card appears in the list.
-
-Other interactions:
-- Tap a card → Detail (read-only, with inline edit)
-- Edit → `updateVoucher()` → reschedule notifications
-- Delete → `cancelVoucherReminders()` → `deleteVoucher()`
-- A notification fires and the user taps it → Detail
-- The app reopens → AsyncStorage hydrates Zustand
-
-Planned files (12):
-
-| File | Role |
+| | |
 |---|---|
-| `app/(tabs)/index.tsx` | Home: list, filter, banner |
-| `app/voucher/new.tsx` | 4-step add flow |
-| `app/voucher/[id].tsx` | Detail, edit, delete |
-| `app/(tabs)/alerts.tsx` | Scheduled reminders list |
-| `app/(tabs)/settings.tsx` | Defaults and currency |
-| `lib/store.ts` | Zustand + AsyncStorage persistence |
-| `lib/mlkit.ts` | OCR + quality scoring |
-| `lib/notifications.ts` | Schedule / cancel reminders |
-| `types/voucher.ts` | Voucher, Reminder and Category types |
-| `components/VoucherCard.tsx` | "Paper stack" card |
-| `tailwind.config.js` | Full design token system |
-| `CLAUDE.md` | AI context file |
+| Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
+| Repo | https://github.com/matan3sh/clipper (default branch `main`) |
+| Status | **Phases 1–2 done** and merged to `main` via [PR #1](https://github.com/matan3sh/clipper/pull/1). Phase 3 (the add-voucher flow) is next and **needs the user's go-ahead**. |
+
+**Original specs from the user:**
+- `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
+- `/Users/matanshaviro/Downloads/clippr-architecture.jsx`: architecture, the main flow and the 12-file map
+
+## Architecture
+
+**Stack**
+
+| Area | Choice |
+|---|---|
+| Platform | Expo SDK 57 (`expo` ~57.0.27), React Native 0.86, React 19.2, TypeScript 6 (strict) |
+| Navigation | Expo Router, with routes in `src/app/` and the `@/` alias pointing at `src/` |
+| Styling | NativeWind v4.2.7 + Tailwind v3.4. All tokens are in `tailwind.config.js`; `metro.config.js` sets `inlineRem: 16` |
+| State | Zustand 5 + `persist` on `@react-native-async-storage/async-storage` |
+| OCR | `@infinitered/react-native-mlkit-text-recognition` 5.0.1 (needs a patch, see Known gotchas) |
+| Other | expo-camera, expo-image-picker, expo-notifications, expo-haptics, expo-file-system, expo-image-manipulator, expo-sharing, @react-native-community/datetimepicker, date-fns 4, react-native-reanimated 4, lucide-react-native |
+| Fonts | `@expo-google-fonts/inter` and `@expo-google-fonts/caveat` |
+
+**Main flow (v0):**
+1. **Capture:** the camera, or a photo from the library
+2. **Analyze:** ML Kit OCR, a 0–100 quality score, and fields filled in from the photo
+3. **Details:** store name, amount and currency, expiry date picker, category
+4. **Reminders:** toggles for 7d / 3d / 1d / on the day, plus a custom day count. They're scheduled with expo-notifications, and the notification IDs are saved on the voucher.
+5. **Save:** `addVoucher()`, then back to Home
+
+**Other flows**
+
+| Action | What happens |
+|---|---|
+| Tap a card | Opens Detail, with inline edit |
+| Edit | `updateVoucher()`, then the reminders are rescheduled |
+| Delete | `cancelVoucherReminders()`, then `deleteVoucher()` |
+| Tap a notification | Opens Detail |
+
+**File map** (✅ = exists, ⏳ = planned)
+
+| File | Status / role |
+|---|---|
+| `src/app/_layout.tsx` | ✅ Font loading, splash screen, Stack, route `ErrorBoundary` |
+| `src/app/(tabs)/_layout.tsx` | ✅ Tabs with the custom `TabBar` |
+| `src/app/(tabs)/index.tsx` | ✅ Home: total, banner, filters, list, empty state |
+| `src/app/(tabs)/alerts.tsx` | ⏳ placeholder (Phase 4) |
+| `src/app/(tabs)/settings.tsx` | ⏳ placeholder (Phase 5) |
+| `src/app/voucher/new.tsx` | ⏳ placeholder with a step indicator (Phase 3); opens as a `fullScreenModal` |
+| `src/app/voucher/[id].tsx` | ⏳ placeholder showing the route id (Phase 4) |
+| `src/lib/store.ts` | ✅ Store, `useHydrated()`, `activeVouchers()`, `newId()`, `defaultReminders()` |
+| `src/lib/format.ts` | ✅ Money, `daysUntil`, `expiryState`, chip labels, `byExpiry` sort |
+| `src/lib/categories.ts` | ✅ Lucide icon and label per category |
+| `src/lib/theme.ts` | ✅ JS mirror of the tokens (icon colors, button shadow) |
+| `src/lib/mlkit.ts` | ⏳ Phase 3 |
+| `src/lib/notifications.ts` | ⏳ Phase 4 |
+| `src/types/voucher.ts` | ✅ Data model, `CATEGORIES`, `CURRENCIES`, `PRESET_REMINDER_DAYS`, `qualityTier()` |
+| `src/components/` | ✅ `TabBar`, `VoucherCard`, `ExpiryBadge`, `ExpiringBanner`, `FilterPills`, `EmptyState`, `Placeholder` |
+| `CLAUDE.md` / `AGENTS.md` | ✅ AI context (`CLAUDE.md` imports `AGENTS.md`, Expo's own guidance) |
+
+**Data model** (`src/types/voucher.ts`)
+- **`Voucher`** fields:
+  - `id`, `storeName`, `category`, `amount`
+  - `currency` (ISO code)
+  - `expiryDate` (`yyyy-MM-dd`, or `null` for no expiry)
+  - `photoUri`, `thumbnailUri?`
+  - `scanQuality` (0–100), `extractedText?`, `notes?`
+  - `status` (`'active'` or `'used'`)
+  - `reminders: Reminder[]`
+  - `createdAt`, `updatedAt`
+- **`Reminder`** fields: `id`, `daysBefore` (0 means on the day), `enabled`, `custom?`, `notificationId?`
+- **`Settings`** fields: `defaultReminderDays`, `defaultCurrency`, `notifyAt: {hour, minute}`
+- **Quality tiers:** 85–100 Excellent, 65–84 Good, below 65 Rescan recommended
 
 ## Design
 
-**Canvas (source of the design):** https://claude.ai/artifact/JDKwnvyoRZsQWdwFDFdV3F
-- A "Design" artifact with 9 iPhone artboards (390×844).
-- To edit it, read it first with the Artifact tool (`action: "read"`), then publish changed `project/*.dc.html` files to the same `url`.
-- Top row: Home, Home empty, Detail, Alerts, Settings. Bottom row: Capture, Analyze, Details, Reminders.
+**Canvas (source of truth for visuals):** https://claude.ai/artifact/JDKwnvyoRZsQWdwFDFdV3F
+- A "Design" artifact with 9 artboards of 390×844.
+  - Top row: Home, Home empty, Detail, Alerts, Settings
+  - Bottom row: Capture, Analyze, Details, Reminders
+- To edit it, read it first with the Artifact tool (`action: "read"`), then publish the changed `project/*.dc.html` files to the same `url`.
+- `prototype/screens/*.dc.html` holds the same screens. Keep the two in sync.
 
-**Design language:** taken from the Acctual style (https://styles.refero.design/style/aeefc294-a8f7-443d-b76a-538dddc29afe), recolored to the **Iris** theme.
+**Design language:** Acctual (https://styles.refero.design/style/aeefc294-a8f7-443d-b76a-538dddc29afe), recolored to the **Iris** palette.
 
-- **Type:** Open Runde is the brand font, but it isn't installed, so the designs use **Inter** (Open Runde is a rounded Inter). Weight 600 for headings, 500 for body.
-  - Tracking: −0.03em on 20px+ headings, −0.02em on body, +0.02em on 11px uppercase eyebrows.
-  - Caveat 600 for small handwritten notes only.
-- **Shapes:** pills (100px radius) for buttons, tags and the nav; 16px for cards and inputs; 20px for images; 32px for large panels and bottom sheets. Nothing under 10px is interactive.
-- **Surfaces:** flat. No gradients. Shadows only on "paper" elements (voucher mockups, notification card, floating nav).
-- **Signature motif:** vouchers drawn as tilted, stacked paper. List cards have a tinted sheet peeking out behind them.
-- **Layout:** 20px side gutter, 58–62px top inset (no fake status bar), bottom bar at 30–34px from the bottom, 44px minimum touch targets.
-- **Nav:** a floating white pill tab bar (Home / Alerts / Settings) next to a round + button (action color).
+**Type**
+- Inter: 600 for headings and amounts (`font-display`), 500 for body (`font-body`), 700 only for voucher wordmarks (`font-strong`).
+- Caveat 600 for short handwritten notes only (`font-hand`).
+- Open Runde is the brand font, but it isn't installed. Inter is the stand-in, since Open Runde is a rounded Inter.
+- Tracking: −0.03em on 20px+ headings, −0.02em on body, +0.02em on 11px uppercase eyebrows.
 
-**Iris color roles:**
+**Shapes**
 
-| Role | Hex | Use |
+| Token | Radius | Used for |
 |---|---|---|
-| Action | `#17132E` | Primary buttons, selected pills, + button, switches "on" (never use the accent for buttons) |
-| Accent | `#6C56FC` | Dots, rings, check circles, scan highlights only |
-| Accent text | `#5541E0` | Small blue-violet text such as eyebrows and dates (≈6:1 contrast) |
-| Wash | `#E1E0FC` | Banner, expiry card, "days left" chips |
-| Text on wash | `#3D2FB0` | |
-| Second wash | `#F6D2F4` | Blush tint for secondary card sheets |
-| Ink | `#1B1830` | Main text |
-| Muted | `#625E78` | Secondary text |
-| Faint | `#8F8AA6` | |
-| Surface | `#F8F7FD` | Secondary pills, icon tiles |
-| Hairline | `#E7E5F1` | |
-| Border | `#D3D0E3` | |
-| Paper | `#FFFFFF` | Background |
-| Camera background | `#17132E` | |
+| `rounded-pill` | 100 | Buttons, tags, nav |
+| `rounded-card` | 16 | Cards, inputs |
+| `rounded-image` | 20 | Photo panels, notification card |
+| `rounded-panel` | 32 | Large panels, bottom sheets |
 
-Shadow and ring colors are based on `rgb(23, 19, 46)`.
+Nothing interactive has a radius under 10.
 
-**Sample data** (the mock's "today" is Sun 11 Oct 2026):
+**Rules**
+- Surfaces are flat: no gradients, no emoji.
+- Shadows only on "paper": voucher cards, the notification card, the floating nav.
+- Signature motif: vouchers drawn as tilted, stacked paper; each list card has a tinted sheet behind it.
 
-| Voucher | Category | Amount | Expires | Status |
+**Layout**
+- 20px side gutter (`px-gutter`)
+- 58px top inset (`pt-safe-top`), with no fake status bar
+- 44px minimum touch targets
+- Floating white pill tab bar beside a round + button in the action color
+
+**Iris colors** (Tailwind class names)
+
+| Token | Hex | Use |
+|---|---|---|
+| `action` | `#17132E` | Primary buttons, selected pills, + button, switches "on". Never use the accent for buttons. |
+| `accent` | `#6C56FC` | Dots, rings, check circles, scan highlights only |
+| `accent-ink` | `#5541E0` | Small accent text: eyebrows, dates |
+| `wash` | `#E1E0FC` | Banner, expiry card, "days left" chips |
+| `wash-ink` | `#3D2FB0` | Text on wash |
+| `wash-muted` | `#4A4566` | Secondary text on wash |
+| `blush` | `#F6D2F4` | Secondary card-sheet tint |
+| `ink` | `#1B1830` | Main text |
+| `muted` | `#625E78` | Secondary text |
+| `faint` | `#8F8AA6` | Faint text, decimals |
+| `surface` | `#F8F7FD` | Secondary pills, icon tiles |
+| `hairline` | `#E7E5F1` | Dividers |
+| `border` | `#D3D0E3` | Borders |
+| `paper` | `#FFFFFF` | Background |
+| `danger` | `#C93C3C` | Expired / rescan text (on `danger-wash` `#FDE6E6`) |
+| `warning` | `#8A5A00` | Warning text (on `warning-wash` `#FBEFD6`) |
+| `camera` | `#17132E` | Camera viewfinder background |
+
+Shadows (`shadow-paper`, `shadow-paper-ring`, `shadow-button`, `shadow-subtle`) are based on `rgb(23, 19, 46)`.
+
+**Seed data in the app.** The 4 vouchers below are added on first launch only (guarded by a `seeded` flag), in ILS, with expiry dates relative to today:
+
+| Voucher | Category | Amount | Expiry | Notes |
 |---|---|---|---|---|
-| Northwind Books | Books | $40 | Sat 17 Oct | 6 days; code NWB-4471-2290; quality 86 |
-| Petal & Co. | Fashion | $60 | 22 Oct | |
-| Oak & Ember Home | Home | $185 | 14 Nov | |
-| Atlas Outdoor | Outdoor | $312.50 | No expiry | |
+| Northwind Books | books | 40 | today + 6 days | quality 86, has a note |
+| Petal & Co. | fashion | 60 | today + 11 days | |
+| Oak & Ember Home | home | 185 | today + 34 days | |
+| Atlas Outdoor | other | 312.50 | no expiry | quality 62 |
 
-- Total shown: $1,284.50 across 9 vouchers.
-- Categories: Books, Fashion, Home, Beauty, Food, Tech, Other.
-- Currencies: USD, EUR, GBP, ILS.
+Categories: books, fashion, home, beauty, food, tech, other. Currencies: USD, EUR, GBP, ILS.
 
-## Clickable prototype (`prototype/`)
+## What exists now
 
-| Path | What it is |
-|---|---|
-| `prototype/screens/*.dc.html` | Screen sources. Same content as the canvas artboards; keep the two in sync. |
-| `prototype/static/app.js` | Interaction layer |
-| `prototype/static/frame.css` | Phone frame |
-| `prototype/static/index.html` | Screen map, with a reset button |
-| `prototype/build.py` | Converts the screens into plain HTML in `prototype/dist/` |
-| `prototype/serve.mjs` | Node static server on port 4173 |
+**Run the app** (an iOS development build is required, because ML Kit can't run in Expo Go):
 
-`app.js` handles:
-- filters
-- switches
-- chips
-- the custom-day stepper
-- date and time pickers
-- inline edit
-- delete / mark-as-used sheets
-- full-photo view
-- toasts
-- in-phone scrolling
+```bash
+export LANG=en_US.UTF-8
+npx expo run:ios --device B51E28EB-1377-4D13-B64E-F97977E4DB1D
+```
 
-It also keeps a small amount of state in localStorage (`clippr.*`):
-- `state`: full / removed / empty
-- `currency`
-- `defaults`
-- `notifyAt`
+- That device is the iPhone 16 Pro simulator on iOS 18.2.
+- After the first build, Metro stays running and Fast Refresh applies JavaScript changes. Rebuild only when native packages or `app.json` change.
+- To relaunch the installed app against a running Metro:
 
-Run it from the project folder:
+```bash
+xcrun simctl openurl B51E28EB-1377-4D13-B64E-F97977E4DB1D "com.clippr.app://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+```
+
+**Checks** (there's no unit test suite yet, and `npm test` has no script):
+
+```bash
+npx tsc --noEmit
+npx expo lint
+npx expo-doctor
+```
+
+All three pass on `main` (expo-doctor: 21/21).
+
+**Clickable HTML prototype** (a design reference, not the app):
 
 ```bash
 python3 prototype/build.py
 node prototype/serve.mjs
 ```
 
-Then open http://localhost:4173.
+Then open http://localhost:4173. `prototype/static/app.js` is the interaction layer and `prototype/static/index.html` is the screen map, with a reset button.
 
-**Server gotchas on this Mac:**
-- Python's `http.server` hangs at bind time (its reverse-DNS lookup), so use the Node server.
-- The Claude preview launcher (`.claude/launch.json`) can't read the Documents folder (macOS permission), and the sandbox blocks local ports. Start the server from a Bash call with the sandbox disabled, in the background.
+**Known gotchas on this Mac**
+- **Simulators.** Xcode 26.4.1 can't target the iOS 26.4 simulators. Use the iOS 18.2 ones.
+- **Sandbox and locale.** Run `expo run:ios`, `npm install` and `git push` with the sandbox disabled. CocoaPods needs `LANG=en_US.UTF-8`.
+- **OCR patch.** `patches/@infinitered+react-native-mlkit-text-recognition+5.0.1.patch` fully qualifies `MLKitTextRecognitionCommon.Text`, because ML Kit's `Text` clashes with SwiftUI's `Text` under Xcode 26. It's re-applied by `"postinstall": "patch-package"`.
+- **NativeWind v4 shadows.** Never add or remove a `shadow-*` class after the first render. The component remounts and the dev build throws "Couldn't find a navigation context". Toggle shadows with `style={{ boxShadow: ... }}` from `src/lib/theme.ts`. Changing colors, spacing and opacity classes is fine.
+- **Store selectors.** `activeVouchers()` builds a new array, so call it inside `useMemo`, never as a `useClipprStore` selector (that loops in Zustand 5).
+- **Hydration.** `useHydrated()` reads persist's own flag, which never writes. If the stored data can't be read, the store writes nothing, so a failed read can't overwrite saved vouchers.
+- **Simulator screenshots** lag one frame behind, so take a second one after each tap. Taps made during a navigation animation are dropped.
+- **Prototype server.** Python's `http.server` hangs at bind time (reverse-DNS lookup), so use `node prototype/serve.mjs`. The Claude preview launcher in `.claude/launch.json` can't read the Documents folder, so start the server from a shell with the sandbox disabled.
+- **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
-The full flow has been QA'd in the browser:
-- all 54 links resolve
-- every control works
-- there were no console errors
+**Git state as of 2026-10-12**
+- The checkout is on `main`, in sync with GitHub (merge commit `2326be9` for PR #1).
+- The merged branch `feature/foundation-and-home` has been deleted locally.
+- `HANDOFF.md` is committed on `main`.
 
 ## Decisions made
 
-- The code field and the Store voucher / Credit note switch were dropped from the details step, to match the spec.
-- Detail keeps a "Mark as used" button next to Delete. It isn't in the spec; the user hasn't decided whether to keep it.
-- Home empty replaces an earlier onboarding screen, since the spec has no onboarding.
-- Reminder dates that have already passed show as disabled, with "date already passed".
-
-## Build progress
-
-We follow the phase plan from the user's master prompt (`~/Downloads/clippr-claude-code-prompt.md`): **stop after each phase and wait for approval.**
-
-- **Phase 1 — Foundation:** built 2026-10-12, awaiting approval.
-  - Expo SDK 57 (`expo` ~57.0.27, RN 0.86, React 19.2, TypeScript 6), Expo Router with routes in `src/app/`
-  - NativeWind v4.2.7 + Tailwind v3.4: Iris tokens in `tailwind.config.js`, `inlineRem: 16`
-  - Fonts: Inter 400/500/600/700 + Caveat 600 via `@expo-google-fonts`, held behind the splash screen
-  - Custom floating pill tab bar (`src/components/TabBar.tsx`) with Home / Alerts / Settings and a + button
-  - Types in `src/types/voucher.ts`, placeholder screens for all 5 routes, a route `ErrorBoundary`, `CLAUDE.md`
-  - `npx tsc --noEmit` and `npx expo lint` are clean
-  - Run it: `npx expo run:ios --device B51E28EB-1377-4D13-B64E-F97977E4DB1D` (development build on the iPhone 16 Pro, iOS 18.2 simulator; ML Kit can't run in Expo Go)
-    - Xcode 26.4.1 can't target the iOS 26.4 simulators on this Mac. Use the iOS 18.2 ones.
-    - Run it with the sandbox disabled, and `export LANG=en_US.UTF-8` first (CocoaPods needs UTF-8).
-  - **Patch:** `patches/@infinitered+react-native-mlkit-text-recognition+5.0.1.patch` fully qualifies `MLKitTextRecognitionCommon.Text`.
-    - Without it, the type clashes with SwiftUI's `Text` under Xcode 26 and the iOS build fails.
-    - It's re-applied automatically by `"postinstall": "patch-package"`.
-  - Verified on the simulator: fonts load, the tabs switch, + opens the full-screen add flow, X closes it, and Detail pushes with its route parameter.
-    - The simulator's screenshots lag one frame behind, so take a second one after each tap.
-- **Phase 1** was approved 2026-10-12.
-- **Phase 2 — Data layer + Home:** built 2026-10-12, awaiting approval.
-  - `src/lib/store.ts`: Zustand + `persist` on AsyncStorage (key `clippr-store`)
-    - Actions: `addVoucher`, `updateVoucher`, `deleteVoucher`, `markUsed`, `deleteAllVouchers`, `updateSettings`
-    - A `hydrated` flag drives the loading state.
-    - Seeds the 4 design sample vouchers once (a `seeded` flag), with expiry dates relative to today: +6, +11, +34 days and no expiry.
-  - The default currency is **ILS (₪)**. The user didn't pick, so it follows the master prompt. Change `DEFAULT_SETTINGS.defaultCurrency` to switch.
-  - Helpers:
-    - `src/lib/format.ts`: money, days-until, expiry state, sort
-    - `src/lib/categories.ts`: lucide icon per category
-    - `src/lib/theme.ts`: JS color and shadow tokens
-  - Components:
-    - `VoucherCard`: paper stack, with an 80 ms staggered `FadeInDown` entry
-    - `ExpiryBadge`
-    - `ExpiringBanner`: shown when a voucher expires within 7 days
-    - `FilterPills`: All / Expiring (≤30 days) / categories present
-    - `EmptyState`
-  - Home: the total counts active, non-expired vouchers in the default currency; the list is sorted soonest first, with no-expiry last.
-  - Verified on the simulator: the list renders like the canvas, filters work, cards open Detail with the right id, and data survives an app restart without re-seeding.
-  - Not yet seen on the simulator: the empty state (nothing can delete vouchers until Phase 4).
-  - **NativeWind gotcha, fixed and recorded in CLAUDE.md:** toggling a `shadow-*` class after the first render crashes the app in dev with "Couldn't find a navigation context". Set the shadow through `style` instead.
-- **Phase 3:** 4-step add flow with camera, ML Kit analysis and the details form
-- **Phase 4:** notifications, Detail screen, Alerts
-- **Phase 5:** Settings, haptics, polish, edge cases
-
-### Decisions from merging the master prompt with the design phase
-
-The design phase wins on visuals, and the master prompt wins on stack and behavior unless noted.
-
 **Visuals**
-- Iris / Acctual design instead of the prompt's orange "Paper Stack", Playfair and DM Sans.
-- Kept the prompt's paper-stack idea as the card motif, using the design's tinted sheet behind each card instead of a folded corner.
-- Fonts are loaded via `@expo-google-fonts`, never the system font (from the prompt).
+- **Design wins on visuals.** Iris/Acctual replaces the master prompt's orange "Paper Stack" with Playfair and DM Sans. The paper-stack idea survives as the tinted sheet behind each card.
+- **Fonts** always come from `@expo-google-fonts`, never the system font.
+- **Icons** are `lucide-react-native` stroke icons. No emoji.
 
 **Data and settings**
-- Categories follow the design: books, fashion, home, beauty, food, tech, other.
-- Currency is stored as an ISO code (USD / EUR / GBP / ILS), not a symbol.
-- The default currency is still to be set in Phase 2: the prompt says ₪, while the design's sample data uses $.
-- Data model taken from the prompt, plus:
-  - `status: 'active' | 'used'`, for the "Mark as used" button
-  - `expiryDate: string | null`, for vouchers that never expire
+- **Categories** follow the design (7, including books and tech).
+- **Currency** is stored as an ISO code. The default is **ILS (₪)**: the user didn't choose, so it follows the master prompt. Change `DEFAULT_SETTINGS.defaultCurrency` in `src/lib/store.ts` to switch.
+- **Added to the data model:**
+  - `status: 'active' | 'used'`, for "Mark as used"
+  - `expiryDate: null`, for vouchers that never expire
   - `Reminder.custom`
   - `Settings.notifyAt`
+- **"Mark as used"** stays on Detail next to Delete. It isn't in the spec, and the user hasn't decided whether to keep it.
+- **No onboarding screen.** The empty Home is the first-run experience.
+- **Past reminder dates** show as disabled, with "date already passed".
+- **Home's total** counts active, non-expired vouchers in the default currency.
+- **Filters:** "Expiring" means 30 days or less. The banner shows when something expires within 7 days.
 
-**Packages**
-- OCR uses `@infinitered/react-native-mlkit-text-recognition`, not `@react-native-ml-kit/text-recognition`.
-  - The prompt's package is flagged "untested on New Architecture", which SDK 57 requires.
-  - The Infinite Red one is an Expo module.
-  - Neither exposes per-character confidence on iOS, so the quality score will use text coverage and size, block and line counts, amount/date pattern hits, and image resolution.
-- Icons use `lucide-react-native` (stroke icons that match the design), not emoji.
-- Added for features already in the prompt:
-  - `expo-file-system` and `expo-image-manipulator`, to keep photos and thumbnails in app storage
-  - `expo-sharing`, for the share button
-  - `@react-native-community/datetimepicker`, for the expiry date picker
+**Packages and config**
+- **OCR package.** Infinite Red's package instead of `@react-native-ml-kit/text-recognition`, which is flagged as untested on the New Architecture.
+  - Neither package exposes per-character confidence on iOS.
+  - So the Phase 3 quality score will use text coverage and size, block and line counts, amount/date pattern hits, and image resolution.
+- **Routes live in `src/app/`** (Expo 57's convention), so the original 12-file map sits under `src/`.
+- **NativeWind v4** (stable) rather than v5 (release candidate).
+- **Light mode only.** `userInterfaceStyle` is `light`, since no dark theme is designed yet.
+- **Not added:**
+  - the template's `.claude/settings.json`, which would have enabled an Expo plugin
+  - the template's `scripts/reset-project.js`
 
-**Behavior from the prompt, still to build**
-- Notes field, share button, photo zoom, expired vouchers greyed out
-- Reminder toggles in Alerts
-- Long-press quick actions, pull-to-refresh
-- Notification permission request on first launch
+## Next steps
 
-**Config**
-- `userInterfaceStyle` is `light`, because there's no dark theme designed yet.
-- The template's `.claude/settings.json` (which enabled an Expo plugin) wasn't added.
-- No git repo yet.
+1. **Sync git.** Run `git checkout main && git pull` before starting new work.
+2. **Clean up `package.json`.** It still has a `reset-project` script pointing at the missing `scripts/reset-project.js`. Remove it in the Phase 3 PR.
+3. **Phase 3, the add-voucher flow** (wait for the user's go-ahead; work on a new branch such as `feature/add-voucher-flow`):
+   - The 4-step flow in `src/app/voucher/new.tsx`, with a step indicator.
+   - Capture with expo-camera, plus a library picker (expo-image-picker). The Home empty state already passes `source: 'library'`.
+   - `src/lib/mlkit.ts`: `analyzeImage(uri)` returns `{ quality, extractedText, suggestions }`.
+     - Amount regex: `/[₪$€£]?\s*\d+(?:[.,]\d{2})?/`
+     - Dates: DD/MM/YYYY, DD.MM.YY, or a written month
+     - Store name: the largest text block
+     - Below 65, offer "Rescan recommended" with a Retake button.
+   - Copy photos into the document directory (expo-file-system) and make a thumbnail (expo-image-manipulator).
+   - Details form: store name, category pills, amount, currency, native date picker, optional notes. Pre-fill from OCR.
+   - Reminder toggles (7/3/1/0 plus custom), then save to the store and go back to Home.
+4. **Phase 4:**
+   - Notifications in `src/lib/notifications.ts`: `scheduleVoucherReminders` and `cancelVoucherReminders`, with the permission request on first launch.
+   - The Detail screen: photo zoom, inline edit, reminders, delete with confirmation, share.
+   - The Alerts tab.
+5. **Phase 5:**
+   - The Settings screen
+   - Haptics, pull-to-refresh, long-press quick actions
+   - Greying out expired vouchers
+   - Handling denied camera or notification permission
+6. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
 
-## Next steps (suggested)
+## User's working rules
 
-1. Scaffold the Expo app with Expo Router, TypeScript and NativeWind (Tailwind). Put the Iris tokens in `tailwind.config.js`.
-2. Build the types, store and notifications modules, then the screens following the 12-file map.
-3. ML Kit OCR + quality scoring. This needs a dev build, not Expo Go.
-4. Optionally load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
-
-## User's working rules (from their global CLAUDE rules)
-
-- Use TypeScript with no `any`. Functional React components. Handle loading states. Error boundaries.
-- Use Conventional Commits.
-- Run `/review`, then `/test`, before committing.
-- If a change touches more than 10 files, ask whether to split it into branches.
-- Use the context7 MCP to look up library docs.
+- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 3 without a go-ahead.
+- **Git:** work on feature branches with a PR per chunk of work. Use Conventional Commits.
+  - Before committing, run `/review`, then `/test`.
+  - If a change touches more than 10 files, ask whether to split it into branches.
+  - Commit and push only when asked.
+  - **`HANDOFF.md` always lives on `main`.** Commit handoff updates straight to `main` as `docs(handoff): …`, with no feature branch or PR. Doing this from a feature branch: stash the file, switch to `main`, pull, pop the stash, commit, push, then switch back.
+- **Code:** TypeScript with no `any` (use `unknown` plus type guards). Functional components and hooks. Explicit loading states. Error boundaries.
+- **Styling:** NativeWind classes for all styling. Raw hex only in `src/lib/theme.ts`. Zustand for app data, `useState` only for local UI state.
+- **Packages:** install with `npx expo install`. Look up library docs with the context7 MCP, and Expo docs at `https://docs.expo.dev/versions/v57.0.0/`.
+- **Show it running:** prove changes on the iOS simulator. The user likes to watch in the simulator panel.

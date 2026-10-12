@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { newId } from '@/lib/ids';
 import type { Reminder, Settings, Voucher } from '@/types/voucher';
 
 export type NewVoucher = Omit<Voucher, 'id' | 'createdAt' | 'updatedAt' | 'status'>;
@@ -26,10 +27,6 @@ const DEFAULT_SETTINGS: Settings = {
   defaultCurrency: 'ILS',
   notifyAt: { hour: 9, minute: 0 },
 };
-
-export function newId(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
 
 export function defaultReminders(days: number[]): Reminder[] {
   return days.map((daysBefore) => ({ id: newId(), daysBefore, enabled: true }));

@@ -1,44 +1,64 @@
-import { router } from 'expo-router';
-import { X } from 'lucide-react-native';
-import { Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Alert } from 'react-native';
 
-import { Placeholder } from '@/components/Placeholder';
-import { colors } from '@/lib/theme';
+import { AnalyzeStep } from '@/components/add-voucher/AnalyzeStep';
+import { CaptureStep } from '@/components/add-voucher/CaptureStep';
+import { DetailsStep } from '@/components/add-voucher/DetailsStep';
+import { RemindersStep } from '@/components/add-voucher/RemindersStep';
+import { useVoucherDraft } from '@/hooks/useVoucherDraft';
 
-const STEPS = ['Capture', 'Analyze', 'Details', 'Reminders'] as const;
-
+/** Add-voucher flow: Capture → Analyze → Details → Reminders, then save and return Home. */
 export default function NewVoucherScreen() {
-  return (
-    <View className="flex-1 bg-paper px-gutter pt-safe-top">
-      <View className="mb-4 flex-row items-center justify-between">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cancel adding voucher"
-          onPress={() => router.back()}
-          className="h-11 w-11 items-center justify-center rounded-pill bg-surface"
-        >
-          <X size={20} color={colors.ink} strokeWidth={2.2} />
-        </Pressable>
-        <Text className="font-display text-body text-ink">Add voucher</Text>
-        <View className="w-11" />
-      </View>
+  const { source } = useLocalSearchParams<{ source?: string }>();
+  const draft = useVoucherDraft();
 
-      <View className="mb-8 flex-row gap-1.5">
-        {STEPS.map((step, index) => (
-          <View key={step} className="flex-1 gap-1.5">
-            <View className={`h-1 rounded-pill ${index === 0 ? 'bg-action' : 'bg-hairline'}`} />
-            <Text className={`text-[11px] ${index === 0 ? 'font-display text-ink' : 'font-body text-muted'}`}>
-              {index + 1} {step}
-            </Text>
-          </View>
-        ))}
-      </View>
+  const save = async () => {
+    try {
+      await draft.save();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (error) {
+      Alert.alert("Couldn't save the voucher", error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
 
-      <Placeholder
-        eyebrow="Step 1 of 4"
-        title="Capture"
-        body="Camera, library import, ML Kit analysis and the details form arrive in Phase 3."
-      />
-    </View>
-  );
+  switch (draft.step) {
+    case 'capture':
+      return (
+        <CaptureStep startWithLibrary={source === 'library'} onClose={() => router.back()} onCaptured={draft.analyze} />
+      );
+    case 'analyze':
+      return (
+        <AnalyzeStep
+          photo={draft.photo}
+          analysis={draft.analysis}
+          onRetake={draft.retake}
+          onContinue={() => draft.setStep('details')}
+        />
+      );
+    case 'details':
+      return (
+        <DetailsStep
+          form={draft.form}
+          onChange={draft.updateForm}
+          analysis={draft.analysis.status === 'done' ? draft.analysis.result : null}
+          onBack={() => draft.setStep('analyze')}
+          onContinue={() => draft.setStep('reminders')}
+        />
+      );
+    case 'reminders':
+      return (
+        <RemindersStep
+          storeName={draft.form.storeName.trim()}
+          expiryDate={draft.form.expiryDate}
+          choice={draft.reminders}
+          onChange={draft.setReminders}
+          notifyAt={draft.notifyAt}
+          saving={draft.saving}
+          onBack={() => draft.setStep('details')}
+          onSave={save}
+        />
+      );
+  }
 }

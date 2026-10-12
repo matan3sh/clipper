@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, Phase 4 in review)
+# Clippr — handoff (updated 2026-10-12, after the Phase 4 merge)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–3 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). **Phase 4** (notifications, Detail, Alerts) is built on `feature/notifications-and-detail`, [PR #4](https://github.com/matan3sh/clipper/pull/4) open, **awaiting review/approval and merge**. Phase 5 is next. |
+| Status | **Phases 1–3 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). **Phase 4** (notifications, Detail, Alerts) merged to `main` via [PR #4](https://github.com/matan3sh/clipper/pull/4); it was merged by the user, but the phase itself hasn't been explicitly signed off. **Phase 5** (Settings, polish) is next and needs a go-ahead. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -70,7 +70,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/lib/mlkit.ts` | ✅ `analyzeImage(uri, size)`: runs ML Kit, then `analyzeOcr` |
 | `src/lib/voucherParsing.ts` | ✅ Pure parsing (store, amount, currency, expiry) and quality scoring; unit-tested |
 | `src/lib/photos.ts` | ✅ `preparePhoto` (EXIF-upright, max 2000px), `persistPhoto` (photo + 360px thumb), `photoFileUri`, `deletePhotos` |
-| `src/lib/reminders.ts` | ✅ `reminderDate`, `isReminderPast`, `buildReminders` (reuse in Phase 4) |
+| `src/lib/reminders.ts` | ✅ `reminderDate`, `isReminderPast`, `buildReminders`, `reminderChoice`, `remindersSummary`, `notificationText`, `upcomingReminders` (single source for iOS scheduling and the Alerts tab), `splitByWeek` |
 | `src/lib/voucherForm.ts` | ✅ `DraftForm`, `validateForm` |
 | `src/lib/navigation.ts` | ✅ `goBackOrHome()`: use for every back/close button |
 | `src/lib/ids.ts` | ✅ `newId()` (moved out of the store so pure modules don't pull in AsyncStorage) |
@@ -203,7 +203,7 @@ npm test
 npx expo-doctor
 ```
 
-All four pass on `main` and on the Phase 4 branch (35 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
+All four pass on `main` (35 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
 
 **Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher image ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos, and one voucher saved from it (USD, books, reminders 3/2/1 days) is in the app's data alongside the 4 seed vouchers. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
 
@@ -235,8 +235,8 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
 **Git state as of 2026-10-12**
-- The checkout is on `main`, in sync with GitHub (merge commit `d666587` for PR #3).
-- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow` and `fix/add-voucher-back-navigation` are deleted locally and on GitHub.
+- The checkout is on `main`, in sync with GitHub (merge commit `b2b52d1` for PR #4).
+- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow`, `fix/add-voucher-back-navigation` and `feature/notifications-and-detail` are deleted locally and on GitHub.
 - `HANDOFF.md` is committed on `main`.
 
 ## Decisions made
@@ -259,7 +259,7 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Quality score** (no OCR confidence on iOS): Sharp 35% (clean words, text height), Frame 25% (text coverage, resolution), Text 40% (fields found, line count). The Analyze screen shows these three bars; the design's "Light" bar became "Frame", since brightness can't be measured without pixel access.
 - **Parsing rules:** amount = a currency-marked number in the largest type (fallback: a decimal next to "value", "balance" and so on); expiry = a date next to "valid", "until" or "exp" (fallback: the latest date), day-first unless impossible; store = the largest block that isn't a price, date, code or stock phrase, title-cased if all caps.
 - **Add flow:** category is required (no default); expiry can be "No expiry"; the date picker starts at today. Amount fields show two decimals ("40.00").
-- **Reminders saved** are only the enabled, still-upcoming ones (like the seed data). A custom count that repeats a preset is dropped. The footer says "N reminders set"; **nothing is scheduled yet** (Phase 4).
+- **Reminders saved** are only the enabled, still-upcoming ones (like the seed data). A custom count that repeats a preset is dropped. The footer says "N reminders set"; they're scheduled with iOS on save.
 - **Camera failures:** a mount error (or no camera) falls back to the library; a single failed shot shows "Try again" and keeps the camera live.
 - **Past reminder dates** show as disabled, with "date already passed".
 - **Home's total** counts active, non-expired vouchers in the default currency.
@@ -279,9 +279,8 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 ## Next steps
 
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
-2. **Get the user's approval for Phase 3**, and ideally a test on a real iPhone (camera capture is unverified in the Simulator).
-3. **Phase 4: review and merge [PR #4](https://github.com/matan3sh/clipper/pull/4)** once the user approves (`gh pr merge 4 --merge --delete-branch`, then delete the local branch and pull `main`). Delete and Mark as used were reviewed but not run end to end in the Simulator (to keep the test data).
-4. **Phase 5:**
+2. **Confirm Phase 4 with the user** and ideally test on a real iPhone (camera capture and real reminder delivery are unverified on a device). Delete and Mark as used were reviewed but not run end to end in the Simulator (to keep the test data).
+3. **Phase 5** (wait for the go-ahead; new branch such as `feature/settings-and-polish`):
    - The Settings screen (changing `notifyAt` must call `syncAllReminders()`)
    - Denied notification permission: Alerts still says "N reminders scheduled"; show a notice instead
    - Somewhere to see used vouchers (or drop "Mark as used")
@@ -289,15 +288,15 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
    - Haptics, pull-to-refresh, long-press quick actions
    - Greying out expired vouchers
    - Handling denied camera or notification permission
-5. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
+4. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
 
 ## User's working rules
 
-- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 4 without a go-ahead.
+- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 5 without a go-ahead.
 - **Git:** work on feature branches with a PR per chunk of work. Use Conventional Commits.
   - Before committing, run `/review`, then `/test` (`npm test`).
   - If a change touches more than 10 files, ask whether to split it into branches.
-  - Commit and push only when asked. When the user says "merge to main", open the PR and merge it with a merge commit (`gh pr merge <n> --merge --delete-branch`), then delete the local branch and pull `main`.
+  - Commit and push only when asked. When the user says "merge to main", open the PR; Claude Code's auto mode blocks `gh pr merge` ("Merge Without Review"), so the user merges it themselves (PR page or `gh pr merge <n> --merge --delete-branch`). Then verify it merged on GitHub (`gh api repos/matan3sh/clipper/pulls/<n> --jq .merged`) before pulling `main`, deleting the local and remote branch, and updating this file.
   - There's no CI on the repo, so local checks (`tsc`, `lint`, `npm test`, `expo-doctor`) are the gate.
   - **`HANDOFF.md` always lives on `main`.** Commit handoff updates straight to `main` as `docs(handoff): …`, with no feature branch or PR. Doing this from a feature branch: stash the file, switch to `main`, pull, pop the stash, commit, push, then switch back.
 - **Code:** TypeScript with no `any` (use `unknown` plus type guards). Functional components and hooks. Explicit loading states. Error boundaries.

@@ -43,7 +43,7 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - English only. RTL is not required.
 
 ## Current phase
-Phase 4 — Notifications, voucher Detail and Alerts: built on `feature/notifications-and-detail`, awaiting approval. (Phases 1–3 approved 2026-10-12.) Phase 5 (Settings, polish) is next.
+Phase 4 — Notifications, voucher Detail and Alerts: merged to `main` (PR #4). (Phases 1–3 approved 2026-10-12.) Phase 5 (Settings, polish) is next and needs a go-ahead.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)

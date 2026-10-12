@@ -43,7 +43,7 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - English only. RTL is not required.
 
 ## Current phase
-Phase 4 — Notifications, voucher Detail and Alerts: merged to `main` (PR #4). (Phases 1–3 approved 2026-10-12.) Phase 5 (Settings, polish) is next and needs a go-ahead.
+Phase 5 — Settings screen, denied-permission handling, Used filter and dimmed cards: built on `feature/settings-and-polish`, awaiting approval. (Phases 1–4 merged.) Remaining polish (haptics, pull-to-refresh, long-press) is a later branch.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)
@@ -53,7 +53,8 @@ Phase 4 — Notifications, voucher Detail and Alerts: merged to `main` (PR #4). 
 - `src/lib/photos.ts`: photo prep, storage as relative paths, thumbnails, `photoFileUri`, `deletePhotos` (Phase 3)
 - `src/lib/reminders.ts`: reminder dates and `buildReminders` (Phase 3, reused by Phase 4)
 - `src/hooks/useVoucherDraft.ts` + `src/components/add-voucher/`: the 4-step add flow (Phase 3)
-- `src/lib/notifications.ts`: schedule/cancel/sync reminders with iOS, serialized (Phase 4)
+- `src/lib/notifications.ts`: schedule/cancel/sync reminders with iOS, serialized; `getNotificationStatus`, `cancelAllReminders` (Phase 4–5)
+- `src/app/(tabs)/settings.tsx` + `src/hooks/useNotificationStatus.ts`: Settings screen and the foreground-aware permission hook (Phase 5)
 - `src/hooks/useNotificationRouting.ts`: launch + foreground sync, notification tap → Detail (Phase 4)
 - `src/hooks/useVoucherEditor.ts` + `src/components/detail/`: Detail's edit mode, photo panel, expiry card (Phase 4)
 - `src/components/form/`: voucher fields and reminder options shared by the add flow and Detail (Phase 4)

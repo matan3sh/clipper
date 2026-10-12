@@ -43,7 +43,7 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - English only. RTL is not required.
 
 ## Current phase
-Phase 5 polish — haptics, pull-to-refresh, long-press quick actions: built on `feature/polish`, awaiting approval. (Phases 1–4 and Phase 5 first slice merged, PR #1–#5.) Denied-camera was already handled in Phase 3. Feature-complete for v0 after this.
+**v0 feature-complete.** Phases 1–5 merged to `main` (PR #1–#6); Phase 5 shipped as two PRs (#5 Settings/permissions/Used-filter, #6 haptics/pull-to-refresh/long-press). No phase in flight. Remaining: a real-device pass and optional extras — see HANDOFF.md → Next steps.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)

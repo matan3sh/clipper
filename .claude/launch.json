@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clippr-prototype",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/Users/matanshaviro/Documents/react-native/clipper/prototype/serve.mjs", "/Users/matanshaviro/Documents/react-native/clipper/prototype/dist", "4173"],
+      "port": 4173
+    }
+  ]
+}

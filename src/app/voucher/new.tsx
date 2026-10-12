@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Alert } from 'react-native';
 
 import { AnalyzeStep } from '@/components/add-voucher/AnalyzeStep';
@@ -7,6 +7,7 @@ import { CaptureStep } from '@/components/add-voucher/CaptureStep';
 import { DetailsStep } from '@/components/add-voucher/DetailsStep';
 import { RemindersStep } from '@/components/add-voucher/RemindersStep';
 import { useVoucherDraft } from '@/hooks/useVoucherDraft';
+import { goBackOrHome } from '@/lib/navigation';
 
 /** Add-voucher flow: Capture → Analyze → Details → Reminders, then save and return Home. */
 export default function NewVoucherScreen() {
@@ -17,7 +18,7 @@ export default function NewVoucherScreen() {
     try {
       await draft.save();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.back();
+      goBackOrHome();
     } catch (error) {
       Alert.alert("Couldn't save the voucher", error instanceof Error ? error.message : 'Please try again.');
     }
@@ -26,7 +27,7 @@ export default function NewVoucherScreen() {
   switch (draft.step) {
     case 'capture':
       return (
-        <CaptureStep startWithLibrary={source === 'library'} onClose={() => router.back()} onCaptured={draft.analyze} />
+        <CaptureStep startWithLibrary={source === 'library'} onClose={goBackOrHome} onCaptured={draft.analyze} />
       );
     case 'analyze':
       return (

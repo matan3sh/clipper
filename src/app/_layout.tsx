@@ -18,6 +18,12 @@ import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Keep the tabs under every stack screen, even when a link opens one directly
+ * (e.g. clippr://voucher/new). Without it, closing that screen has nowhere to go back to.
+ */
+export const unstable_settings = { anchor: '(tabs)' };
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,

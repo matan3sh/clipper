@@ -22,6 +22,8 @@ export function VoucherCard({ voucher, index }: VoucherCardProps) {
   const Icon = CATEGORY_ICONS[voucher.category];
   const thumbnail = photoFileUri(voucher.thumbnailUri);
   const expired = state === 'expired';
+  const used = voucher.status === 'used';
+  const dimmed = expired || used;
   const subtitle = voucher.expiryDate
     ? `${categoryLabel(voucher.category)} · ${expired ? 'Expired' : 'Exp'} ${formatShortDate(voucher.expiryDate)}`
     : `${categoryLabel(voucher.category)} · No expiry`;
@@ -39,7 +41,7 @@ export function VoucherCard({ voucher, index }: VoucherCardProps) {
           style={{ transform: [{ rotate: index % 2 === 0 ? '-1.5deg' : '1.5deg' }] }}
         />
         <View
-          className={`flex-row items-center gap-3 rounded-card bg-paper p-3 shadow-paper-ring ${expired ? 'opacity-60' : ''}`}
+          className={`flex-row items-center gap-3 rounded-card bg-paper p-3 shadow-paper-ring ${dimmed ? 'opacity-60' : ''}`}
         >
           <View className="h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-card bg-surface">
             {thumbnail ? (
@@ -58,7 +60,13 @@ export function VoucherCard({ voucher, index }: VoucherCardProps) {
           </View>
           <View className="items-end gap-1">
             <Text className="font-display text-body text-ink">{formatMoney(voucher.amount, voucher.currency)}</Text>
-            <ExpiryBadge voucher={voucher} />
+            {used ? (
+              <View className="rounded-pill bg-surface px-2 py-0.5">
+                <Text className="font-display text-[11px] leading-4 text-muted">Used</Text>
+              </View>
+            ) : (
+              <ExpiryBadge voucher={voucher} />
+            )}
           </View>
         </View>
       </Pressable>

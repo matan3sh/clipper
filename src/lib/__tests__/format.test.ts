@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { amountInputText, parseAmountInput } from '@/lib/format';
+import { amountInputText, formatBytes, parseAmountInput } from '@/lib/format';
 
 describe('parseAmountInput', () => {
   it('accepts whole numbers, dot or comma decimals and thousands separators', () => {
@@ -22,5 +22,15 @@ describe('amountInputText', () => {
     expect(amountInputText(40)).toBe('40.00');
     expect(amountInputText(1250)).toBe('1250.00');
     expect(amountInputText(312.5)).toBe('312.50');
+  });
+});
+
+describe('formatBytes', () => {
+  it('shows KB under a megabyte and one-decimal MB above it', () => {
+    expect(formatBytes(0)).toBe('0 KB');
+    expect(formatBytes(-10)).toBe('0 KB');
+    expect(formatBytes(500)).toBe('1 KB');
+    expect(formatBytes(180 * 1024)).toBe('180 KB');
+    expect(formatBytes(2.4 * 1024 * 1024)).toBe('2.4 MB');
   });
 });

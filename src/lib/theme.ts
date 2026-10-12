@@ -17,6 +17,7 @@ export const colors = {
   border: '#d3d0e3',
   washInk: '#3d2fb0',
   danger: '#c93c3c',
+  warning: '#8a5a00',
 } as const;
 
 export const shadows = {

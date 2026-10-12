@@ -14,9 +14,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { useNotificationRouting } from '@/hooks/useNotificationRouting';
+import { configureNotifications } from '@/lib/notifications';
 import { colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
+configureNotifications();
 
 /**
  * Keep the tabs under every stack screen, even when a link opens one directly
@@ -33,6 +36,7 @@ export default function RootLayout() {
     Caveat_600SemiBold,
   });
   const ready = fontsLoaded || fontError !== null;
+  useNotificationRouting(ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

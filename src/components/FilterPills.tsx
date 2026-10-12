@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { shadows } from '@/lib/theme';
 
 export interface FilterOption {
@@ -30,7 +31,10 @@ export function FilterPills({ options, selected, onSelect }: FilterPillsProps) {
             key={option.id}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            onPress={() => onSelect(option.id)}
+            onPress={() => {
+              if (!active) haptics.select();
+              onSelect(option.id);
+            }}
             className={`h-9 justify-center rounded-pill px-3.5 ${active ? 'bg-action' : 'bg-surface'}`}
             style={{ boxShadow: active ? shadows.button : undefined }}
           >

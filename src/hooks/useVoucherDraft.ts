@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { amountInputText, parseAmountInput } from '@/lib/format';
 import { analyzeImage, type Analysis } from '@/lib/mlkit';
+import { scheduleVoucherReminders } from '@/lib/notifications';
 import { persistPhoto, preparePhoto, type PreparedPhoto } from '@/lib/photos';
 import { buildReminders, type ReminderChoice } from '@/lib/reminders';
 import type { DraftForm } from '@/lib/voucherForm';
@@ -92,7 +93,7 @@ export function useVoucherDraft() {
     try {
       const { photoUri, thumbnailUri } = await persistPhoto(photo.uri);
       const result = analysis.status === 'done' ? analysis.result : null;
-      return addVoucher({
+      const voucher = addVoucher({
         storeName: form.storeName.trim(),
         category: form.category,
         amount,
@@ -105,6 +106,11 @@ export function useVoucherDraft() {
         notes: form.notes.trim() || undefined,
         reminders: buildReminders(form.expiryDate, reminders, settings.notifyAt),
       });
+      // The voucher is saved either way; a scheduling failure shouldn't hold up the flow.
+      scheduleVoucherReminders(voucher).catch((error: unknown) =>
+        console.warn('Clippr: could not schedule reminders', error),
+      );
+      return voucher;
     } finally {
       setSaving(false);
     }

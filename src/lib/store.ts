@@ -18,6 +18,11 @@ interface ClipprState {
   updateVoucher: (id: string, patch: Partial<Omit<Voucher, 'id' | 'createdAt'>>) => void;
   deleteVoucher: (id: string) => void;
   markUsed: (id: string) => void;
+  /**
+   * Records the iOS notification ids scheduled for a voucher, keyed by reminder id. Reminders not in
+   * the map lose their id. Doesn't touch `updatedAt`: this is bookkeeping, not a user edit.
+   */
+  setNotificationIds: (voucherId: string, ids: Record<string, string>) => void;
   deleteAllVouchers: () => void;
   updateSettings: (patch: Partial<Settings>) => void;
 }
@@ -77,6 +82,14 @@ export const useClipprStore = create<ClipprState>()(
             v.id === id ? { ...v, status: 'used', updatedAt: new Date().toISOString() } : v,
           ),
         })),
+      setNotificationIds: (voucherId, ids) =>
+        set((state) => {
+          const voucher = state.vouchers.find((v) => v.id === voucherId);
+          // The launch/foreground sync calls this for every voucher; skip the write when nothing changed.
+          if (!voucher || voucher.reminders.every((r) => r.notificationId === ids[r.id])) return state;
+          const reminders = voucher.reminders.map((r) => ({ ...r, notificationId: ids[r.id] }));
+          return { vouchers: state.vouchers.map((v) => (v.id === voucherId ? { ...v, reminders } : v)) };
+        }),
       deleteAllVouchers: () => set({ vouchers: [] }),
       updateSettings: (patch) => set((state) => ({ settings: { ...state.settings, ...patch } })),
     }),

@@ -1,6 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { buildReminders, isReminderPast, reminderDate } from '@/lib/reminders';
+import {
+  buildReminders,
+  isReminderPast,
+  notificationText,
+  reminderChoice,
+  reminderDate,
+  reminderLabel,
+  remindersSummary,
+  splitByWeek,
+  upcomingReminders,
+} from '@/lib/reminders';
+import type { Reminder, Voucher } from '@/types/voucher';
 
 const NINE_AM = { hour: 9, minute: 0 };
 // 12 Oct 2026, 10:30: today's 9:00 reminder has already gone.
@@ -39,5 +50,97 @@ describe('buildReminders', () => {
     ]);
     const repeat = buildReminders('2026-10-17', { presets: [3], customDays: 3 }, NINE_AM, NOW);
     expect(repeat).toHaveLength(1);
+  });
+});
+
+const reminder = (daysBefore: number, extra: Partial<Reminder> = {}): Reminder => ({
+  id: `r${daysBefore}${extra.custom ? 'c' : ''}`,
+  daysBefore,
+  enabled: true,
+  ...extra,
+});
+
+const voucher = (storeName: string, expiryDate: string | null, reminders: Reminder[], extra: Partial<Voucher> = {}): Voucher => ({
+  id: storeName,
+  storeName,
+  category: 'books',
+  amount: 40,
+  currency: 'USD',
+  expiryDate,
+  photoUri: '',
+  scanQuality: 90,
+  status: 'active',
+  reminders,
+  createdAt: '2026-10-01T00:00:00.000Z',
+  updatedAt: '2026-10-01T00:00:00.000Z',
+  ...extra,
+});
+
+describe('reminderChoice', () => {
+  it('rebuilds presets and the custom count from saved reminders, ignoring disabled ones', () => {
+    expect(reminderChoice([reminder(7), reminder(3, { enabled: false }), reminder(1), reminder(2, { custom: true })])).toEqual({
+      presets: [7, 1],
+      customDays: 2,
+    });
+    expect(reminderChoice([])).toEqual({ presets: [], customDays: null });
+  });
+});
+
+describe('reminderLabel and remindersSummary', () => {
+  it('labels single reminders', () => {
+    expect(reminderLabel(0)).toBe('On the day');
+    expect(reminderLabel(1)).toBe('1 day before');
+    expect(reminderLabel(7)).toBe('7 days before');
+  });
+
+  it('summarises a voucher\'s reminders, longest first', () => {
+    expect(remindersSummary([reminder(1), reminder(3), reminder(2, { custom: true })])).toBe('3 days, 2 days, 1 day before');
+    expect(remindersSummary([reminder(0), reminder(7)])).toBe('7 days before · on the day');
+    expect(remindersSummary([reminder(0)])).toBe('On the day');
+    expect(remindersSummary([reminder(3, { enabled: false })])).toBe('None');
+  });
+});
+
+describe('notificationText', () => {
+  it('says when the voucher expires and what it is worth', () => {
+    const v = { storeName: 'Northwind Books', amount: 40, currency: 'USD' as const };
+    expect(notificationText(v, 3)).toEqual({
+      title: 'Northwind Books expires in 3 days',
+      body: '$40.00 voucher — tap to open it.',
+    });
+    expect(notificationText(v, 1).title).toBe('Northwind Books expires tomorrow');
+    expect(notificationText(v, 0).title).toBe('Northwind Books expires today');
+  });
+});
+
+describe('upcomingReminders', () => {
+  it('lists future reminders on active vouchers, soonest first', () => {
+    const items = upcomingReminders(
+      [
+        voucher('Petal & Co.', '2026-10-23', [reminder(7), reminder(3)]),
+        voucher('Northwind Books', '2026-10-17', [reminder(5), reminder(3), reminder(1, { enabled: false })]),
+        voucher('Atlas Outdoor', null, [reminder(3)]),
+        voucher('Used Store', '2026-10-20', [reminder(3)], { status: 'used' }),
+      ],
+      NINE_AM,
+      NOW,
+    );
+    expect(items.map((i) => [i.voucher.storeName, i.reminder.daysBefore])).toEqual([
+      ['Northwind Books', 3],
+      ['Petal & Co.', 7],
+      ['Petal & Co.', 3],
+    ]);
+    expect(items[0].date).toEqual(new Date(2026, 9, 14, 9, 0));
+  });
+
+  it('splits them into the next 7 days and later', () => {
+    const items = upcomingReminders(
+      [voucher('Oak & Ember Home', '2026-11-15', [reminder(7)]), voucher('Northwind Books', '2026-10-17', [reminder(3)])],
+      NINE_AM,
+      NOW,
+    );
+    const { thisWeek, later } = splitByWeek(items, NOW);
+    expect(thisWeek.map((i) => i.voucher.storeName)).toEqual(['Northwind Books']);
+    expect(later.map((i) => i.voucher.storeName)).toEqual(['Oak & Ember Home']);
   });
 });

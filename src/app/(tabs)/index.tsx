@@ -14,6 +14,7 @@ import { CATEGORIES } from '@/types/voucher';
 
 const ALL = 'all';
 const EXPIRING = 'expiring';
+const USED = 'used';
 
 export default function HomeScreen() {
   const hydrated = useHydrated();
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState<string>(ALL);
 
   const active = useMemo(() => activeVouchers(vouchers).sort(byExpiry), [vouchers]);
+  const used = useMemo(() => vouchers.filter((v) => v.status === 'used').sort(byExpiry), [vouchers]);
 
   const summary = useMemo(() => {
     const usable = active.filter((v) => expiryState(v) !== 'expired');
@@ -41,16 +43,18 @@ export default function HomeScreen() {
       { id: ALL, label: `All ${active.length}` },
       ...(summary.expiringSoon.length > 0 ? [{ id: EXPIRING, label: `Expiring ${summary.expiringSoon.length}` }] : []),
       ...present.map((c) => ({ id: c.id, label: categoryLabel(c.id) })),
+      ...(used.length > 0 ? [{ id: USED, label: `Used ${used.length}` }] : []),
     ];
-  }, [active, summary.expiringSoon.length]);
+  }, [active, summary.expiringSoon.length, used.length]);
 
   // A filter can disappear (e.g. its last voucher was deleted); fall back to All.
   const selected = options.some((o) => o.id === filter) ? filter : ALL;
   const visible = useMemo(() => {
     if (selected === ALL) return active;
     if (selected === EXPIRING) return summary.expiringSoon;
+    if (selected === USED) return used;
     return active.filter((v) => v.category === selected);
-  }, [active, selected, summary.expiringSoon]);
+  }, [active, selected, summary.expiringSoon, used]);
 
   if (!hydrated) {
     return (

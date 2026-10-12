@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, after the Phase 4 merge)
+# Clippr — handoff (updated 2026-10-12, after the Phase 5 merge)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -16,7 +16,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 |---|---|
 | Project folder | `/Users/matanshaviro/Documents/react-native/clipper` |
 | Repo | https://github.com/matan3sh/clipper (default branch `main`) |
-| Status | **Phases 1–3 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1), [PR #2](https://github.com/matan3sh/clipper/pull/2), fix [PR #3](https://github.com/matan3sh/clipper/pull/3)). **Phase 4** (notifications, Detail, Alerts) merged to `main` via [PR #4](https://github.com/matan3sh/clipper/pull/4); it was merged by the user, but the phase itself hasn't been explicitly signed off. **Phase 5** (Settings, polish) is next and needs a go-ahead. |
+| Status | **Phases 1–4 approved** and merged to `main` ([PR #1](https://github.com/matan3sh/clipper/pull/1)–[PR #4](https://github.com/matan3sh/clipper/pull/4)). **Phase 5 first slice** (Settings screen, denied-notification handling, Home "Used" filter, dimmed used/expired cards) merged via [PR #5](https://github.com/matan3sh/clipper/pull/5), merged by the user but not yet explicitly signed off. **Phase 5 polish** (haptics, pull-to-refresh, long-press quick actions) is the next branch. |
 
 **Original specs from the user:**
 - `/Users/matanshaviro/Downloads/clippr-claude-code-prompt.md`: the master prompt, with the phase plan, data model and behavior
@@ -60,7 +60,8 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 | `src/app/(tabs)/_layout.tsx` | ✅ Tabs with the custom `TabBar` |
 | `src/app/(tabs)/index.tsx` | ✅ Home: total, banner, filters, list, empty state |
 | `src/app/(tabs)/alerts.tsx` | ✅ Alerts: next-reminder preview, This week / Later (Phase 4) |
-| `src/app/(tabs)/settings.tsx` | ⏳ placeholder (Phase 5) |
+| `src/app/(tabs)/settings.tsx` | ✅ Settings: default reminders, notify-time picker (reschedules on close), currency, permission status, storage count/size, delete-all (Phase 5) |
+| `src/hooks/useNotificationStatus.ts` | ✅ Notification permission, re-read on foreground (Phase 5) |
 | `src/app/voucher/new.tsx` | ✅ The 4-step add flow; opens as a `fullScreenModal`. `?source=library` opens the picker on arrival |
 | `src/app/voucher/[id].tsx` | ✅ Detail: photo panel + viewer, expiry card, inline edit, share, delete, mark as used (Phase 4) |
 | `src/lib/store.ts` | ✅ Store (`addVoucher`, `updateVoucher`, `deleteVoucher`, `markUsed`, …), `useHydrated()`, `activeVouchers()`, `defaultReminders()` |
@@ -203,7 +204,7 @@ npm test
 npx expo-doctor
 ```
 
-All four pass on `main` (35 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
+All four pass on `main` (36 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
 
 **Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher image ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos, and one voucher saved from it (USD, books, reminders 3/2/1 days) is in the app's data alongside the 4 seed vouchers. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
 
@@ -223,6 +224,7 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **NativeWind v4 shadows.** Never add or remove a `shadow-*` class after the first render. The component remounts and the dev build throws "Couldn't find a navigation context". Toggle shadows with `style={{ boxShadow: ... }}` from `src/lib/theme.ts`. Changing colors, spacing and opacity classes is fine.
 - **Store selectors.** `activeVouchers()` builds a new array, so call it inside `useMemo`, never as a `useClipprStore` selector (that loops in Zustand 5).
 - **Hydration.** `useHydrated()` reads persist's own flag, which never writes. If the stored data can't be read, the store writes nothing, so a failed read can't overwrite saved vouchers.
+- **Simulator tap/swipe coordinates are in DEVICE POINTS** (402×874 on this iPhone 16 Pro), not screenshot pixels. The screenshot tool reports its point space on attach; convert a display-pixel x by ~0.437. Getting this wrong sends taps off-screen and looks like an unresponsive button.
 - **Simulator screenshots** lag behind — sometimes several seconds, which can look like a frozen screen. Wait and take another before concluding a tap failed. Taps made during a navigation or modal animation are dropped.
 - **Testing notifications.** `xcrun simctl push <udid> com.clippr.app push.json` with `{"aps":{"alert":{...}},"body":{"voucherId":"<id>"}}` delivers a banner whose tap goes through the real routing. Simulator notification permission can't be reset with `simctl privacy`.
 - **Fast Refresh mid-edit.** Saving a file that uses a new import before the import is added throws once and can leave the app wedged; relaunch it.
@@ -235,8 +237,8 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 - **Push errors.** If `git push` fails with HTTP 400, check the repo-local settings: `git config --local http.version HTTP/1.1` is already set.
 
 **Git state as of 2026-10-12**
-- The checkout is on `main`, in sync with GitHub (merge commit `b2b52d1` for PR #4).
-- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow`, `fix/add-voucher-back-navigation` and `feature/notifications-and-detail` are deleted locally and on GitHub.
+- The checkout is on `main`, in sync with GitHub (merge commit `860b8b0` for PR #5).
+- Merged branches `feature/foundation-and-home`, `feature/add-voucher-flow`, `fix/add-voucher-back-navigation`, `feature/notifications-and-detail` and `feature/settings-and-polish` are deleted locally and on GitHub.
 - `HANDOFF.md` is committed on `main`.
 
 ## Decisions made
@@ -279,20 +281,17 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 ## Next steps
 
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
-2. **Confirm Phase 4 with the user** and ideally test on a real iPhone (camera capture and real reminder delivery are unverified on a device). Delete and Mark as used were reviewed but not run end to end in the Simulator (to keep the test data).
-3. **Phase 5** (wait for the go-ahead; new branch such as `feature/settings-and-polish`):
-   - The Settings screen (changing `notifyAt` must call `syncAllReminders()`)
-   - Denied notification permission: Alerts still says "N reminders scheduled"; show a notice instead
-   - Somewhere to see used vouchers (or drop "Mark as used")
-   - Per-voucher scheduling doesn't enforce the 64-notification iOS limit (the launch sync does)
-   - Haptics, pull-to-refresh, long-press quick actions
-   - Greying out expired vouchers
-   - Handling denied camera or notification permission
-4. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
+2. **Confirm Phases 4–5 with the user** and ideally test on a real iPhone (camera capture and real reminder delivery are unverified on a device).
+3. **Phase 5 polish** (wait for the go-ahead; new branch such as `feature/polish`):
+   - Haptics, pull-to-refresh on Home, long-press quick actions on cards
+   - Handling denied **camera** permission in the add flow (notification-denied is done)
+   - Per-voucher scheduling still doesn't enforce the 64-notification iOS limit (only the launch sync does)
+4. **Not fully verified in Phase 5** (worth a device/real check): the Alerts denied-notification notice (the Simulator keeps notifications granted and `simctl` can't revoke them) and expired-card dimming (no currently-expired seed vouchers).
+5. **Optional:** load the real Open Runde font (OFL, from GitHub). Ask before downloading it.
 
 ## User's working rules
 
-- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 5 without a go-ahead.
+- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start the next phase without a go-ahead.
 - **Git:** work on feature branches with a PR per chunk of work. Use Conventional Commits.
   - Before committing, run `/review`, then `/test` (`npm test`).
   - If a change touches more than 10 files, ask whether to split it into branches.

@@ -71,3 +71,10 @@ export function byExpiry(a: Voucher, b: Voucher): number {
   if (b.expiryDate === null) return -1;
   return a.expiryDate.localeCompare(b.expiryDate);
 }
+
+/** Human-readable size for the Settings storage row: "412 KB", "2.4 MB". */
+export function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 KB';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

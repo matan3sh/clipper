@@ -72,6 +72,27 @@ export function deletePhotos(files: (File | string | undefined)[]): void {
   }
 }
 
+/** Total bytes of the stored photos directory; 0 when it doesn't exist or can't be read. */
+export function photosDirSize(): number {
+  try {
+    const dir = new Directory(Paths.document, PHOTO_DIR);
+    return dir.exists ? (dir.size ?? 0) : 0;
+  } catch (error) {
+    console.warn('Clippr: could not measure stored photos', error);
+    return 0;
+  }
+}
+
+/** Removes every stored voucher photo, for "Delete all vouchers". Best-effort. */
+export function deleteAllPhotos(): void {
+  try {
+    const dir = new Directory(Paths.document, PHOTO_DIR);
+    if (dir.exists) dir.delete();
+  } catch (error) {
+    console.warn('Clippr: could not delete stored photos', error);
+  }
+}
+
 /** Absolute file URI for a stored photo path. Returns null for vouchers without a photo (the samples). */
 export function photoFileUri(stored: string | undefined): string | null {
   if (!stored) return null;

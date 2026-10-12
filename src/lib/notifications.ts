@@ -23,6 +23,15 @@ function isAllowed(status: Notifications.NotificationPermissionsStatus): boolean
   return status.granted || status.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 }
 
+export type NotificationStatus = 'granted' | 'denied' | 'undetermined';
+
+/** Reads the current permission without prompting, for the Settings and Alerts status. */
+export async function getNotificationStatus(): Promise<NotificationStatus> {
+  const current = await Notifications.getPermissionsAsync();
+  if (isAllowed(current)) return 'granted';
+  return current.canAskAgain ? 'undetermined' : 'denied';
+}
+
 /** True when reminders can be shown. Asks the first time; never asks again once the user has answered. */
 export async function ensureNotificationPermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
@@ -81,6 +90,11 @@ export function scheduleVoucherReminders(voucher: Voucher): Promise<void> {
     }
     useClipprStore.getState().setNotificationIds(voucher.id, ids);
   });
+}
+
+/** Cancels every pending reminder, for "Delete all vouchers". */
+export function cancelAllReminders(): Promise<void> {
+  return serial(() => Notifications.cancelAllScheduledNotificationsAsync());
 }
 
 /** Cancels a voucher's pending reminders, before it's deleted or marked as used. */

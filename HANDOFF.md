@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, after Phase 3)
+# Clippr — handoff (updated 2026-10-12, after Phase 3 and the back-navigation fix)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -40,7 +40,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 1. **Capture:** the camera, or a photo from the library
 2. **Analyze:** ML Kit OCR, a 0–100 quality score, and fields filled in from the photo
 3. **Details:** store name, amount and currency, expiry date picker, category
-4. **Reminders:** toggles for 7d / 3d / 1d / on the day, plus a custom day count. They're scheduled with expo-notifications, and the notification IDs are saved on the voucher.
+4. **Reminders:** toggles for 7d / 3d / 1d / on the day, plus a custom day count. Saved on the voucher now; **Phase 4** schedules them with expo-notifications and stores the notification IDs.
 5. **Save:** `addVoucher()`, then back to Home
 
 **Other flows**
@@ -56,14 +56,14 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
 
 | File | Status / role |
 |---|---|
-| `src/app/_layout.tsx` | ✅ Font loading, splash screen, Stack, route `ErrorBoundary` |
+| `src/app/_layout.tsx` | ✅ Font loading, splash screen, Stack, route `ErrorBoundary`; `unstable_settings.anchor = '(tabs)'` |
 | `src/app/(tabs)/_layout.tsx` | ✅ Tabs with the custom `TabBar` |
 | `src/app/(tabs)/index.tsx` | ✅ Home: total, banner, filters, list, empty state |
 | `src/app/(tabs)/alerts.tsx` | ⏳ placeholder (Phase 4) |
 | `src/app/(tabs)/settings.tsx` | ⏳ placeholder (Phase 5) |
 | `src/app/voucher/new.tsx` | ✅ The 4-step add flow; opens as a `fullScreenModal`. `?source=library` opens the picker on arrival |
 | `src/app/voucher/[id].tsx` | ⏳ placeholder showing the route id (Phase 4) |
-| `src/lib/store.ts` | ✅ Store, `useHydrated()`, `activeVouchers()`, `newId()`, `defaultReminders()` |
+| `src/lib/store.ts` | ✅ Store (`addVoucher`, `updateVoucher`, `deleteVoucher`, `markUsed`, …), `useHydrated()`, `activeVouchers()`, `defaultReminders()` |
 | `src/lib/format.ts` | ✅ Money, `daysUntil`, `expiryState`, chip labels, `byExpiry` sort |
 | `src/lib/categories.ts` | ✅ Lucide icon and label per category |
 | `src/lib/theme.ts` | ✅ JS mirror of the tokens (icon colors, button shadow) |
@@ -88,7 +88,7 @@ Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project.
   - `id`, `storeName`, `category`, `amount`
   - `currency` (ISO code)
   - `expiryDate` (`yyyy-MM-dd`, or `null` for no expiry)
-  - `photoUri`, `thumbnailUri?`: paths **relative** to the document directory (`vouchers/<id>.jpg`), because the iOS container path changes between installs. Resolve with `photoFileUri()`
+  - `photoUri`, `thumbnailUri?`: empty for the seed vouchers; otherwise paths **relative** to the document directory (`vouchers/<id>.jpg`), because the iOS container path changes between installs. Resolve with `photoFileUri()`
   - `scanQuality` (0–100), `extractedText?`, `notes?`
   - `status` (`'active'` or `'used'`)
   - `reminders: Reminder[]`
@@ -151,7 +151,8 @@ Nothing interactive has a radius under 10.
 | `muted` | `#625E78` | Secondary text |
 | `faint` | `#8F8AA6` | Faint text, decimals |
 | `surface` | `#F8F7FD` | Secondary pills, icon tiles |
-| `hairline` | `#E7E5F1` | Dividers |
+| `hairline` | `#E7E5F1` | Divider fills (`bg-hairline`), empty tracks |
+| `divider` | `#E7E5F1` | Same value, for borders (`border-divider`) — see gotchas |
 | `border` | `#D3D0E3` | Borders |
 | `paper` | `#FFFFFF` | Background |
 | `danger` | `#C93C3C` | Expired / rescan text (on `danger-wash` `#FDE6E6`) |
@@ -199,7 +200,7 @@ npx expo-doctor
 
 All four pass on `main` (29 tests; expo-doctor 21/21). Tests cover the pure modules in `src/lib/`; there are no UI tests yet.
 
-**Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
+**Testing the add flow in the Simulator.** There's no camera, so use the library. A test voucher image ("Northwind Books $40.00", valid until 17.10.2026) is already in the Simulator's Photos, and one voucher saved from it (USD, books, reminders 3/2/1 days) is in the app's data alongside the 4 seed vouchers. Injected taps can't reach Apple's photo picker (it runs out of process), so either tap the photo yourself in the panel, or temporarily feed a file straight into `draft.analyze(uri, w, h)` and remove that before committing.
 
 **Clickable HTML prototype** (a design reference, not the app):
 
@@ -260,13 +261,13 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 **Packages and config**
 - **OCR package.** Infinite Red's package instead of `@react-native-ml-kit/text-recognition`, which is flagged as untested on the New Architecture.
   - Neither package exposes per-character confidence on iOS.
-  - So the Phase 3 quality score will use text coverage and size, block and line counts, amount/date pattern hits, and image resolution.
+  - So the quality score uses OCR-derived signals instead (see the quality-score decision above).
 - **Routes live in `src/app/`** (Expo 57's convention), so the original 12-file map sits under `src/`.
 - **NativeWind v4** (stable) rather than v5 (release candidate).
 - **Light mode only.** `userInterfaceStyle` is `light`, since no dark theme is designed yet.
 - **Not added:**
   - the template's `.claude/settings.json`, which would have enabled an Expo plugin
-  - the template's `scripts/reset-project.js`
+  - the template's `scripts/reset-project.js` (its stale `reset-project` script was removed from `package.json` in Phase 3)
 
 ## Next steps
 
@@ -287,13 +288,15 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 
 ## User's working rules
 
-- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 3 without a go-ahead.
+- **Phase-gated:** stop after each phase and wait for explicit approval. Don't start Phase 4 without a go-ahead.
 - **Git:** work on feature branches with a PR per chunk of work. Use Conventional Commits.
   - Before committing, run `/review`, then `/test` (`npm test`).
   - If a change touches more than 10 files, ask whether to split it into branches.
-  - Commit and push only when asked.
+  - Commit and push only when asked. When the user says "merge to main", open the PR and merge it with a merge commit (`gh pr merge <n> --merge --delete-branch`), then delete the local branch and pull `main`.
+  - There's no CI on the repo, so local checks (`tsc`, `lint`, `npm test`, `expo-doctor`) are the gate.
   - **`HANDOFF.md` always lives on `main`.** Commit handoff updates straight to `main` as `docs(handoff): …`, with no feature branch or PR. Doing this from a feature branch: stash the file, switch to `main`, pull, pop the stash, commit, push, then switch back.
 - **Code:** TypeScript with no `any` (use `unknown` plus type guards). Functional components and hooks. Explicit loading states. Error boundaries.
 - **Styling:** NativeWind classes for all styling. Raw hex only in `src/lib/theme.ts`. Zustand for app data, `useState` only for local UI state.
 - **Packages:** install with `npx expo install`. Look up library docs with the context7 MCP, and Expo docs at `https://docs.expo.dev/versions/v57.0.0/`.
-- **Show it running:** prove changes on the iOS simulator. The user likes to watch in the simulator panel.
+- **Show it running:** prove changes on the iOS simulator yourself (screenshots, taps), and check for LogBox error toasts before calling something done. The user likes to watch in the simulator panel.
+- **Explanations:** the user is still learning git basics (asked how to see the current branch); give plain commands like `git branch --show-current` when relevant.

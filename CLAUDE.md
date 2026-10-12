@@ -43,7 +43,7 @@ Clickable reference prototype: `prototype/` (build with `python3 prototype/build
 - English only. RTL is not required.
 
 ## Current phase
-Phase 5 first slice — Settings screen, denied-notification handling, Used filter and dimmed cards: merged to `main` (PR #5). (Phases 1–4 merged.) Phase 5 polish (haptics, pull-to-refresh, long-press, denied-camera handling) is the next branch and needs a go-ahead.
+Phase 5 polish — haptics, pull-to-refresh, long-press quick actions: built on `feature/polish`, awaiting approval. (Phases 1–4 and Phase 5 first slice merged, PR #1–#5.) Denied-camera was already handled in Phase 3. Feature-complete for v0 after this.
 
 ## Key files
 - `src/types/voucher.ts`: data model (source of truth)
@@ -55,6 +55,8 @@ Phase 5 first slice — Settings screen, denied-notification handling, Used filt
 - `src/hooks/useVoucherDraft.ts` + `src/components/add-voucher/`: the 4-step add flow (Phase 3)
 - `src/lib/notifications.ts`: schedule/cancel/sync reminders with iOS, serialized; `getNotificationStatus`, `cancelAllReminders` (Phase 4–5)
 - `src/app/(tabs)/settings.tsx` + `src/hooks/useNotificationStatus.ts`: Settings screen and the foreground-aware permission hook (Phase 5)
+- `src/lib/haptics.ts`: tasteful haptic feedback wrapper (Phase 5 polish)
+- `src/hooks/useVoucherActions.ts` + `src/components/VoucherQuickActions.tsx`: share/mark-used/delete shared by Detail and Home's long-press menu (Phase 5 polish)
 - `src/hooks/useNotificationRouting.ts`: launch + foreground sync, notification tap → Detail (Phase 4)
 - `src/hooks/useVoucherEditor.ts` + `src/components/detail/`: Detail's edit mode, photo panel, expiry card (Phase 4)
 - `src/components/form/`: voucher fields and reminder options shared by the add flow and Detail (Phase 4)

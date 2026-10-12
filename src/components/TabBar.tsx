@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { haptics } from '@/lib/haptics';
 import { colors } from '@/lib/theme';
 
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
@@ -37,7 +38,10 @@ export function TabBar({ state, navigation }: TabBarProps) {
               accessibilityLabel={tab.label}
               onPress={() => {
                 const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                if (!focused && !event.defaultPrevented) {
+                  haptics.select();
+                  navigation.navigate(route.name);
+                }
               }}
               className={`flex-1 items-center justify-center gap-0.5 rounded-pill ${focused ? 'bg-surface' : ''}`}
             >
@@ -52,7 +56,10 @@ export function TabBar({ state, navigation }: TabBarProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Add a voucher"
-        onPress={() => router.push('/voucher/new')}
+        onPress={() => {
+          haptics.tap();
+          router.push('/voucher/new');
+        }}
         className="h-[60px] w-[60px] items-center justify-center rounded-pill bg-action shadow-button active:opacity-90"
       >
         <Plus size={24} color={colors.paper} strokeWidth={2.2} />

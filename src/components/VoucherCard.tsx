@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ExpiryBadge } from '@/components/ExpiryBadge';
 import { CATEGORY_ICONS, categoryLabel } from '@/lib/categories';
 import { expiryState, formatMoney, formatShortDate } from '@/lib/format';
+import { haptics } from '@/lib/haptics';
 import { photoFileUri } from '@/lib/photos';
 import { colors } from '@/lib/theme';
 import type { Voucher } from '@/types/voucher';
@@ -14,10 +15,12 @@ interface VoucherCardProps {
   voucher: Voucher;
   /** Position in the list: drives the entry stagger and which way the back sheet tilts. */
   index: number;
+  /** Long-press opens the quick-actions menu. */
+  onLongPress?: () => void;
 }
 
 /** "Paper stack" card: a white card with a tinted sheet peeking out behind it. */
-export function VoucherCard({ voucher, index }: VoucherCardProps) {
+export function VoucherCard({ voucher, index, onLongPress }: VoucherCardProps) {
   const state = expiryState(voucher);
   const Icon = CATEGORY_ICONS[voucher.category];
   const thumbnail = photoFileUri(voucher.thumbnailUri);
@@ -33,7 +36,12 @@ export function VoucherCard({ voucher, index }: VoucherCardProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${voucher.storeName}, ${formatMoney(voucher.amount, voucher.currency)}, ${subtitle}`}
-        onPress={() => router.push({ pathname: '/voucher/[id]', params: { id: voucher.id } })}
+        onPress={() => {
+          haptics.select();
+          router.push({ pathname: '/voucher/[id]', params: { id: voucher.id } });
+        }}
+        onLongPress={onLongPress}
+        delayLongPress={300}
         className="active:opacity-80"
       >
         <View

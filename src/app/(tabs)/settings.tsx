@@ -9,6 +9,7 @@ import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { Sheet } from '@/components/Sheet';
 import { useNotificationStatus } from '@/hooks/useNotificationStatus';
 import { formatBytes } from '@/lib/format';
+import { haptics } from '@/lib/haptics';
 import { cancelAllReminders, syncAllReminders } from '@/lib/notifications';
 import { deleteAllPhotos, photosDirSize } from '@/lib/photos';
 import { useClipprStore } from '@/lib/store';
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   useFocusEffect(useCallback(() => setStorageBytes(photosDirSize()), []));
 
   const togglePreset = (days: number, on: boolean) => {
+    haptics.select();
     const next = on
       ? [...new Set([...settings.defaultReminderDays, days])].sort((a, b) => b - a)
       : settings.defaultReminderDays.filter((d) => d !== days);
@@ -106,7 +108,10 @@ export default function SettingsScreen() {
                 key={c.code}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
-                onPress={() => updateSettings({ defaultCurrency: c.code as CurrencyCode })}
+                onPress={() => {
+                  if (!selected) haptics.select();
+                  updateSettings({ defaultCurrency: c.code as CurrencyCode });
+                }}
                 className={`h-14 flex-1 items-center justify-center gap-px rounded-card border ${selected ? 'border-action bg-action' : 'border-border bg-paper'}`}
               >
                 <Text className={`font-display text-body ${selected ? 'text-paper' : 'text-ink'}`}>{c.symbol}</Text>
@@ -144,7 +149,10 @@ export default function SettingsScreen() {
         <Pressable
           accessibilityRole="button"
           disabled={vouchers.length === 0}
-          onPress={() => setConfirmingClear(true)}
+          onPress={() => {
+            haptics.warning();
+            setConfirmingClear(true);
+          }}
           className="h-[52px] justify-center active:opacity-70"
         >
           <Text className={`font-display text-[15px] ${vouchers.length === 0 ? 'text-faint' : 'text-ink'}`}>

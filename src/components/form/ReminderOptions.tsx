@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { Minus, Plus } from 'lucide-react-native';
 import { Pressable, Switch, Text, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { isReminderPast, reminderDate, reminderLabel, type ReminderChoice } from '@/lib/reminders';
 import { colors } from '@/lib/theme';
 import { PRESET_REMINDER_DAYS, type Settings } from '@/types/voucher';
@@ -23,10 +24,13 @@ export function ReminderOptions({ expiryDate, choice, onChange, notifyAt }: Remi
     return isReminderPast(expiryDate, days, notifyAt) ? `${when} · date already passed` : `${when} · ${timeLabel}`;
   };
 
-  const togglePreset = (days: number, on: boolean) =>
+  const togglePreset = (days: number, on: boolean) => {
+    haptics.select();
     onChange({ ...choice, presets: on ? [...choice.presets, days] : choice.presets.filter((d) => d !== days) });
+  };
 
   const stepCustom = (delta: 1 | -1) => {
+    haptics.select();
     const current = choice.customDays;
     const next = current === null ? (delta === 1 ? 2 : null) : current + delta < 1 ? null : Math.min(current + delta, MAX_CUSTOM_DAYS);
     onChange({ ...choice, customDays: next });

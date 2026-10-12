@@ -291,6 +291,44 @@ v0 is feature-complete. No phase is in flight; wait for the user's direction. Li
 
 If the user wants to keep building, treat a new chunk of work as its own phase: branch, `/review`, `/test`, PR.
 
+## Device test checklist
+
+Everything below was verified in the iPhone 16 Pro **Simulator** as it was built. This list is for a pass on a **real iPhone**, which covers what the Simulator can't: the camera, real notification delivery, and haptics. Order is roughly "set it up once, then exercise each area."
+
+**Get the build on a device**
+- [ ] Connect an iPhone (iOS 18+), trust the Mac, and sign the app with a free Apple ID in Xcode if needed (the bundle id is `com.clippr.app`).
+- [ ] `export LANG=en_US.UTF-8 && npx expo run:ios --device` and pick the connected iPhone. First build is slow; after that Metro + Fast Refresh work like on the Simulator.
+- [ ] App launches past the splash with Inter fonts (no system-font flash), and the 5 seed vouchers show on Home.
+
+**Camera & capture (Simulator has no camera)**
+- [ ] First "+" → camera shows the iOS **camera permission prompt**; Allow → live viewfinder with the voucher frame guide.
+- [ ] Take a photo of a **real voucher**; the shutter has a haptic; it advances to Analyze.
+- [ ] **OCR** reads a real voucher: store name, amount, currency and expiry are pre-filled where present, with a sensible quality score and the three quality bars.
+- [ ] **Flash** toggle works; a second photo works; "Try again" after a failed shot keeps the camera live.
+- [ ] **Deny** camera (Settings → Clippr) → the "Camera access is off… Open Settings" panel shows, and the **Library** button still works as a fallback.
+
+**Notifications (real delivery — the big one)**
+- [ ] First launch shows the **notification permission prompt**; Allow.
+- [ ] Add a voucher expiring in ~2 days with a reminder, set **Notify at** to a minute or two ahead, lock the phone, and confirm the reminder **actually fires** as a banner with the right title/body.
+- [ ] **Tap a delivered notification** → opens that voucher's Detail: test with the app in the **foreground**, **backgrounded**, and **fully closed (cold start)**.
+- [ ] Change **Notify at** in Settings and confirm a pending reminder re-fires at the new time.
+- [ ] **Deny** notifications → Alerts shows the "notifications are off" notice (opens Settings), and Settings shows **Off** → Open Settings. Re-allow → the notice clears and reminders reschedule.
+- [ ] (Optional stress) Add enough vouchers/reminders to exceed ~60 and confirm nothing errors; the launch sync keeps the soonest 60 (per-voucher scheduling doesn't trim — known limit).
+
+**Haptics (silent in the Simulator)**
+- [ ] Selection ticks on filter pills, tab switches, the "+" button, reminder toggles, and the Settings reminder/currency choices.
+- [ ] A warning buzz before **Delete** and **Delete all vouchers**; a success buzz on **Save** and **Mark as used**.
+
+**Expiry, time & the rest of the app**
+- [ ] Add a voucher with a **past expiry date** (or wait) → its Home card is **dimmed** and the badge reads "Expired"; it's excluded from the total.
+- [ ] "Days left" is correct; leave the app open across **midnight** (or change the device date) and **pull-to-refresh** / re-focus Home → counts and expired state update.
+- [ ] **Full photo** viewer opens on a real photo and **pinch-zooms**; **Share** opens the iOS share sheet and actually shares the image.
+- [ ] Home cards show the **photo thumbnail** when a voucher has one.
+- [ ] **Long-press** a card → quick actions (Mark used / Share / Delete); delete asks to confirm and removes the photo files; mark-used moves it to the **Used** filter (dimmed).
+- [ ] Add → save → appears on Home; edit a voucher → changes persist and reminders reschedule; everything survives an app **restart** (AsyncStorage).
+
+Note the outcome (and any device-only bugs) back in this file, and keep `HANDOFF.md` on `main`.
+
 ## User's working rules
 
 - **Phase-gated:** stop after each phase and wait for explicit approval. Don't start the next phase without a go-ahead.

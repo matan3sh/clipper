@@ -1,4 +1,4 @@
-# Clippr — handoff (updated 2026-10-12, after the Phase 5 polish merge — v0 feature-complete)
+# Clippr — handoff (updated 2026-10-14, v0 feature-complete — real-device test pass pending)
 
 Paste into a new chat, or say: "Read HANDOFF.md and continue the Clippr project."
 
@@ -282,10 +282,11 @@ Then open http://localhost:4173. `prototype/static/app.js` is the interaction la
 
 ## Next steps
 
-v0 is feature-complete. No phase is in flight; wait for the user's direction. Likely next:
+v0 is feature-complete and all code is merged to `main`. No phase is in flight. The active task is the **real-device test pass**, started 2026-10-14.
 
 1. **Sync git.** Run `git checkout main && git pull` before starting new work.
-2. **Real-device pass** (the main gap). Unverified on hardware: camera capture, real reminder delivery at the notify time, haptics (silent in the Simulator), and notification-tap routing from a real push. Also worth checking on a device, since the Simulator couldn't: the Alerts denied-notification notice (`simctl` can't revoke notification permission) and expired-card dimming (no currently-expired seed vouchers).
+2. **Real-device pass — in progress, blocked on the user.** The build is **not yet on the device**: signing isn't configured and the phone needs Developer Mode + trust (see the Device test checklist → "Get the build on a device"). The assistant can't do the signing (it's the user's Apple ID) or drive the phone. Once the user readies the device and selects a signing team, the assistant can run `npx expo run:ios --device` and then walk them through the checklist item by item, fixing anything that fails. To set up the expired-card-dimming case, inject a past-dated voucher (edit AsyncStorage or add one in-app with a past expiry).
+   - Still unverified on hardware: camera capture, real reminder delivery at the notify time, notification-tap routing from a real push, haptics (silent in the Simulator), the Alerts denied-notification notice, and expired-card dimming.
 3. **Known limitation:** per-voucher scheduling still doesn't enforce the 64-notification iOS cap — only the launch/foreground sync trims to 60. Only matters with dozens of vouchers.
 4. **Optional extras:** load the real Open Runde font (OFL, from GitHub — ask before downloading); haptics on the add/edit form's category and currency pickers; whatever new direction the user wants (e.g. export/backup, barcode display, more categories).
 
@@ -295,10 +296,13 @@ If the user wants to keep building, treat a new chunk of work as its own phase: 
 
 Everything below was verified in the iPhone 16 Pro **Simulator** as it was built. This list is for a pass on a **real iPhone**, which covers what the Simulator can't: the camera, real notification delivery, and haptics. Order is roughly "set it up once, then exercise each area."
 
-**Get the build on a device**
-- [ ] Connect an iPhone (iOS 18+), trust the Mac, and sign the app with a free Apple ID in Xcode if needed (the bundle id is `com.clippr.app`).
-- [ ] `export LANG=en_US.UTF-8 && npx expo run:ios --device` and pick the connected iPhone. First build is slow; after that Metro + Fast Refresh work like on the Simulator.
+**Get the build on a device** — not done yet; blocked on signing + device setup (needs the user; see below).
+- [ ] Ready the phone: unlock, connect by cable, **Trust This Computer**, and enable **Settings → Privacy & Security → Developer Mode** (prompts a restart). Until then the device may read as "unavailable" to the tools.
+- [ ] **Set signing (once).** The Xcode project has **no `DEVELOPMENT_TEAM` / `CODE_SIGN_STYLE`** — it's only ever been built for the Simulator, which needs no signing. Open `ios/Clippr.xcworkspace`, select the **Clippr** target → **Signing & Capabilities** → tick **Automatically manage signing** → pick an Apple ID **Team** (a free one works). If the bundle id `com.clippr.app` is rejected as taken, change it to something unique (e.g. `com.matan3sh.clippr`).
+- [ ] Build: `export LANG=en_US.UTF-8 && npx expo run:ios --device` and pick the connected iPhone (as of 2026-10-14 this is **Matan's iPhone 14 Pro, iOS 26.6.2**, UDID `00008120-001A024636A0C01E`). First build is slow; after that Metro + Fast Refresh work like on the Simulator.
 - [ ] App launches past the splash with Inter fonts (no system-font flash), and the 5 seed vouchers show on Home.
+
+> **The assistant cannot drive a physical iPhone** — the Simulator tooling is Simulator-only. Run this checklist by hand; the assistant can build/install, set up edge-case data, and debug failures you report, but can't tap or screenshot the device.
 
 **Camera & capture (Simulator has no camera)**
 - [ ] First "+" → camera shows the iOS **camera permission prompt**; Allow → live viewfinder with the voucher frame guide.
